@@ -1,5 +1,4 @@
-require('dotenv').config(); // Load .env for local dev
-
+// db.js
 const { Pool } = require('pg');
 
 const pool = new Pool({
@@ -12,5 +11,4 @@ const pool = new Pool({
     rejectUnauthorized: false,
   },
 });
-
 module.exports = pool;

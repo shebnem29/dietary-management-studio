@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const categoriesRoute = require('./routes/categories');
+const recipesRoute = require('./routes/recipes')
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -13,7 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/categories', categoriesRoute);
-
+app.use('/recipes', recipesRoute)
 // ✅ Fetch and log categories on server startup
 pool.query('SELECT * FROM categories')
   .then(result => {
