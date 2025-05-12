@@ -26,7 +26,7 @@ router.post('/register', async (req, res) => {
         const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1d' });
         await sgMail.send({
             to: email,
-            from: 'snacksmart.app@gmail.com',
+            from: 'snacksmartapp@gmail.com',
             templateId: process.env.SENDGRID_TEMPLATE_ID,
             dynamic_template_data: {
               name,
