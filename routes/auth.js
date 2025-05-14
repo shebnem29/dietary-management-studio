@@ -10,6 +10,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/register', async (req, res) => {
     const { name, email, password, tipsOptIn } = req.body;
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'All fields are required' });
@@ -19,9 +20,10 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         await db.query(
-            'INSERT INTO users (name, email, password, tips_opt_in) VALUES ($1, $2, $3, $4)',
-            [name, email, hashedPassword, tipsOptIn || false]
+            'INSERT INTO users (name, email, password, tips_opt_in, email_verification_code) VALUES ($1, $2, $3, $4, $5)',
+            [name, email, hashedPassword, tipsOptIn || false, verificationCode]
         );
+        
 
         const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1d' });
         await sgMail.send({
@@ -29,10 +31,10 @@ router.post('/register', async (req, res) => {
             from: 'snacksmartapp@gmail.com',
             templateId: process.env.SENDGRID_TEMPLATE_ID,
             dynamic_template_data: {
-              name,
-              verify_link: `https://dietary-management-studio.onrender.com/api/auth/verify?token=${token}`
+                name,
+                code: verificationCode
             },
-          });
+        });
       
           res.status(201).json({ message: 'User registered. Please verify your email.' });
       
@@ -75,19 +77,25 @@ router.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
-router.get('/verify', async (req, res) => {
-    const { token } = req.query;
+router.post('/verify-code', async (req, res) => {
+    const { email, code } = req.body;
   
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const email = decoded.email;
+      const result = await db.query('SELECT email_verification_code FROM users WHERE email = $1', [email]);
+      const user = result.rows[0];
   
-      await db.query('UPDATE users SET verified = true WHERE email = $1', [email]);
+      if (!user) return res.status(404).json({ message: 'User not found' });
   
-      res.send('✅ Email verified! You can now log in to SnackSmart.');
+      if (user.email_verification_code === code) {
+        await db.query('UPDATE users SET verified = true, email_verification_code = NULL WHERE email = $1', [email]);
+        return res.status(200).json({ message: '✅ Email verified!' });
+      } else {
+        return res.status(400).json({ message: '❌ Invalid verification code' });
+      }
+  
     } catch (err) {
       console.error(err);
-      res.status(400).send('❌ Verification link is invalid or expired.');
+      res.status(500).json({ message: 'Server error' });
     }
   });
   
