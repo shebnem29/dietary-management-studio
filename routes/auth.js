@@ -10,22 +10,47 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/register', async (req, res) => {
     const { name, email, password, tipsOptIn } = req.body;
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'All fields are required' });
     }
 
     try {
+        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const existingUser = result.rows[0];
+
+        // 🔁 If user already exists
+        if (existingUser) {
+            if (existingUser.verified) {
+                return res.status(400).json({ message: 'Email already registered' });
+            } else {
+                // 🔁 Resend verification code
+                const newVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+                await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [newVerificationCode, email]);
+
+                await sgMail.send({
+                    to: email,
+                    from: 'snacksmartapp@gmail.com',
+                    templateId: process.env.SENDGRID_TEMPLATE_ID,
+                    dynamic_template_data: {
+                        name: existingUser.name,
+                        code: newVerificationCode
+                    },
+                });
+
+                return res.status(200).json({ message: 'User already registered but not verified. New verification code sent.' });
+            }
+        }
+
+        // 🆕 Register new user
         const hashedPassword = await bcrypt.hash(password, 10);
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         await db.query(
             'INSERT INTO users (name, email, password, tips_opt_in, email_verification_code) VALUES ($1, $2, $3, $4, $5)',
             [name, email, hashedPassword, tipsOptIn || false, verificationCode]
         );
-        
 
-        const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1d' });
         await sgMail.send({
             to: email,
             from: 'snacksmartapp@gmail.com',
@@ -35,17 +60,13 @@ router.post('/register', async (req, res) => {
                 code: verificationCode
             },
         });
-      
-          res.status(201).json({ message: 'User registered. Please verify your email.' });
-      
-        } catch (error) {
-          console.error(error);
-          if (error.code === '23505') {
-            res.status(400).json({ message: 'Email already registered' });
-          } else {
-            res.status(500).json({ message: 'Internal server error' });
-          }
-        }
+
+        res.status(201).json({ message: 'User registered. Please verify your email.' });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 router.post('/login', async (req, res) => {
