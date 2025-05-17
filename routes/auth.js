@@ -98,5 +98,31 @@ router.post('/verify-code', async (req, res) => {
       res.status(500).json({ message: 'Server error' });
     }
   });
-  
+  router.post('/resend-code', async (req, res) => {
+    const { email } = req.body;
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    try {
+        const result = await db.query('SELECT * FROM users WHERE email = $1 AND verified = false', [email]);
+        const user = result.rows[0];
+        if (!user) return res.status(404).json({ message: 'User not found or already verified' });
+
+        await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [code, email]);
+
+        await sgMail.send({
+            to: email,
+            from: 'snacksmartapp@gmail.com',
+            templateId: process.env.SENDGRID_TEMPLATE_ID,
+            dynamic_template_data: {
+                name: user.name,
+                code
+            },
+        });
+
+        res.status(200).json({ message: 'Verification code resent.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 module.exports = router;
