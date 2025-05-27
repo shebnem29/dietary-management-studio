@@ -31,5 +31,21 @@ WHERE categories.name = $1
         res.status(500).json({ error: 'Failed to fetch recipes' });
     }
 });
-
+router.get('/:id/ingredients', async (req, res) => {
+    const recipeId = req.params.id;
+    try {
+      const query = `
+        SELECT i.name, ri.original, ri.amount, ri.unit
+        FROM recipe_ingredients ri
+        JOIN ingredients i ON ri.ingredient_id = i.id
+        WHERE ri.recipe_id = $1
+      `;
+      const { rows } = await db.query(query, [recipeId]);
+      console.log(rows)
+      res.json(rows);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to fetch ingredients' });
+    }
+  });
 module.exports = router;
