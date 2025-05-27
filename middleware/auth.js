@@ -15,6 +15,6 @@ module.exports = (req, res, next) => {
     req.user = decoded; // Add user info to request (e.g., { id, email })
     next(); // Go to the next middleware or route handler
   } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token 2" });
   }
 };
