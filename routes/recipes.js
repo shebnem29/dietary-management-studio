@@ -48,4 +48,23 @@ router.get('/:id/ingredients', async (req, res) => {
       res.status(500).json({ error: 'Failed to fetch ingredients' });
     }
   });
+  // GET instructions by recipe ID
+router.get('/:id/instructions', async (req, res) => {
+    const recipeId = req.params.id;
+  
+    try {
+      const query = `
+        SELECT step_number, description
+        FROM instructions
+        WHERE recipe_id = $1
+        ORDER BY step_number ASC
+      `;
+      const { rows } = await db.query(query, [recipeId]);
+      res.json(rows);
+    } catch (err) {
+      console.error('Error fetching instructions:', err);
+      res.status(500).json({ error: 'Failed to fetch instructions' });
+    }
+  });
+  
 module.exports = router;
