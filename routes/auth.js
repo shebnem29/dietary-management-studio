@@ -5,7 +5,7 @@ const db = require('../db');
 const sgMail = require('@sendgrid/mail');
 const router = express.Router();
 
-const JWT_SECRET = '8aD2&hK!vRz9$Tg5@wLp#EwX7BvZ^L6c';
+const JWT_SECRET = process.env.JWT_SECRET;
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/register', async (req, res) => {

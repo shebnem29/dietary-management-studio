@@ -19,7 +19,6 @@ app.get('/', (req, res) => {
 app.use('/categories', categoriesRoute);
 app.use('/recipes', recipesRoute)
 app.use('/api/auth', authRoutes)
-app.use("/api/users", userRoutes);
 
 // ✅ Fetch and log categories on server startup
 pool.query('SELECT * FROM categories')
