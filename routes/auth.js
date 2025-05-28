@@ -5,7 +5,7 @@ const db = require('../db');
 const sgMail = require('@sendgrid/mail');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET;;
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/register', async (req, res) => {
@@ -92,7 +92,7 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-        res.status(200).json({ token, sex: user.sex, birthday: user.birthday });
+        res.status(200).json({ token, sex: user.sex, });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
