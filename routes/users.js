@@ -6,7 +6,7 @@ const authMiddleware = require("../middleware/auth"); // if you have this
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { sex, height } = req.body;
+  const { sex, height, weight } = req.body;
 
   const validOptions = ["Male", "Female", "Pregnant", "Breastfeeding"];
   if (sex && !validOptions.includes(sex)) {
@@ -15,6 +15,10 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
 
   if (height && (typeof height !== "number" || height <= 0)) {
     return res.status(400).json({ message: "Invalid height value" });
+  }
+
+  if (weight && (typeof weight !== "number" || weight <= 0)) {
+    return res.status(400).json({ message: "Invalid weight value" });
   }
 
   try {
@@ -29,6 +33,10 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
     if (height) {
       fields.push(`height = $${i++}`);
       values.push(height);
+    }
+    if (weight) {
+      fields.push(`weight = $${i++}`);
+      values.push(weight);
     }
 
     if (fields.length === 0) {
