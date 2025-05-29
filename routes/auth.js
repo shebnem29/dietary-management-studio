@@ -92,7 +92,14 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-        res.status(200).json({ token, sex: user.sex, birthday: user.birthday, height: user.height, weight: user.weight });
+        res.status(200).json({
+            token, 
+            sex: user.sex, 
+            birthday: user.birthday, 
+            height: user.height, 
+            weight: user.weight, 
+            activity_level: user.activity_level,
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });

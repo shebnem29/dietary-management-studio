@@ -6,13 +6,19 @@ const authMiddleware = require("../middleware/auth");
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { sex, height, weight, birthday } = req.body;
+  const { sex, height, weight, birthday, activity_level } = req.body;
 
   const validOptions = ["Male", "Female", "Pregnant", "Breastfeeding"];
   if (sex && !validOptions.includes(sex)) {
     return res.status(400).json({ message: "Invalid sex option" });
   }
-
+  const validActivityLevels = [
+    "Sedentary",
+    "Light Exercise",
+    "Moderate Exercise",
+    "Heavy Exercise",
+    "Athlete",
+  ];
   if (height && (typeof height !== "number" || height <= 0)) {
     return res.status(400).json({ message: "Invalid height value" });
   }
@@ -26,6 +32,10 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
     if (isNaN(date.getTime())) {
       return res.status(400).json({ message: "Invalid birthday value" });
     }
+  }
+
+  if (activity_level && !validActivityLevels.includes(activity_level)) {
+    return res.status(400).json({ message: "Invalid activity level" });
   }
 
   try {
@@ -49,7 +59,10 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
       fields.push(`birthday = $${i++}`);
       values.push(birthday);
     }
-
+    if (activity_level) {
+      fields.push(`activity_level = $${i++}`);
+      values.push(activity_level);
+    }
     if (fields.length === 0) {
       return res.status(400).json({ message: "No valid fields to update" });
     }
