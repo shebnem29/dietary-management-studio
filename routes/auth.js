@@ -85,14 +85,14 @@ router.post('/login', async (req, res) => {
         }
         if (!user.verified) {
             return res.status(403).json({ message: 'Please verify your email before logging in.' });
-          }
+        }
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-        res.status(200).json({ token, sex: user.sex, });
+        res.status(200).json({ token, sex: user.sex, height: user.height });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
@@ -100,26 +100,26 @@ router.post('/login', async (req, res) => {
 });
 router.post('/verify-code', async (req, res) => {
     const { email, code } = req.body;
-  
+
     try {
-      const result = await db.query('SELECT email_verification_code FROM users WHERE email = $1', [email]);
-      const user = result.rows[0];
-  
-      if (!user) return res.status(404).json({ message: 'User not found' });
-  
-      if (user.email_verification_code === code) {
-        await db.query('UPDATE users SET verified = true, email_verification_code = NULL WHERE email = $1', [email]);
-        return res.status(200).json({ message: '✅ Email verified!' });
-      } else {
-        return res.status(400).json({ message: '❌ Invalid verification code' });
-      }
-  
+        const result = await db.query('SELECT email_verification_code FROM users WHERE email = $1', [email]);
+        const user = result.rows[0];
+
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (user.email_verification_code === code) {
+            await db.query('UPDATE users SET verified = true, email_verification_code = NULL WHERE email = $1', [email]);
+            return res.status(200).json({ message: '✅ Email verified!' });
+        } else {
+            return res.status(400).json({ message: '❌ Invalid verification code' });
+        }
+
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: 'Server error' });
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
     }
-  });
-  router.post('/resend-code', async (req, res) => {
+});
+router.post('/resend-code', async (req, res) => {
     const { email } = req.body;
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
