@@ -13,11 +13,11 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
     return res.status(400).json({ message: "Invalid sex option" });
   }
   const validActivityLevels = [
-    "Sedentary",
-    "Light Exercise",
-    "Moderate Exercise",
-    "Heavy Exercise",
-    "Athlete",
+    "Sedentary (office job)",
+    "Light Exercise (1-2 days/week)",
+    "Moderate Exercise (3-5 days/week)",
+    "Heavy Exercise (6-7 days/week)",
+    "Athlete (2x per day)",
   ];
   if (height && (typeof height !== "number" || height <= 0)) {
     return res.status(400).json({ message: "Invalid height value" });
