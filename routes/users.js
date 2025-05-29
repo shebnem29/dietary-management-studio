@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const authMiddleware = require("../middleware/auth"); // if you have this
+const authMiddleware = require("../middleware/auth");
 
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { sex, height, weight } = req.body;
+  const { sex, height, weight, birthday } = req.body;
 
   const validOptions = ["Male", "Female", "Pregnant", "Breastfeeding"];
   if (sex && !validOptions.includes(sex)) {
@@ -19,6 +19,13 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
 
   if (weight && (typeof weight !== "number" || weight <= 0)) {
     return res.status(400).json({ message: "Invalid weight value" });
+  }
+
+  if (birthday) {
+    const date = new Date(birthday);
+    if (isNaN(date.getTime())) {
+      return res.status(400).json({ message: "Invalid birthday value" });
+    }
   }
 
   try {
@@ -38,13 +45,17 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
       fields.push(`weight = $${i++}`);
       values.push(weight);
     }
+    if (birthday) {
+      fields.push(`birthday = $${i++}`);
+      values.push(birthday);
+    }
 
     if (fields.length === 0) {
       return res.status(400).json({ message: "No valid fields to update" });
     }
 
-    values.push(userId); // For WHERE clause
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${i}`;
+    values.push(userId);
+    const query = `UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`;
     await db.query(query, values);
 
     res.json({ message: "Profile updated successfully" });
@@ -54,4 +65,4 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
