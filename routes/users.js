@@ -8,10 +8,8 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const { sex, height, weight, birthday, activity_level } = req.body;
 
-const validOptions = ["male", "female"];
-  if (sex && !validOptions.includes(sex)) {
-    return res.status(400).json({ message: "Invalid sex option" });
-  }
+  const validOptions = ["male", "female"];
+  const validStates = ["none", "pregnant", "breastfeeding", "menopause"];
   const validActivityLevels = [
     "Sedentary (office job)",
     "Light Exercise (1-2 days/week)",
@@ -19,6 +17,14 @@ const validOptions = ["male", "female"];
     "Heavy Exercise (6-7 days/week)",
     "Athlete (2x per day)",
   ];
+  if (sex && !validOptions.includes(sex)) {
+    return res.status(400).json({ message: "Invalid sex option" });
+  }
+
+  if (physiological_state && !validStates.includes(physiological_state)) {
+    return res.status(400).json({ message: "Invalid physiological state" });
+  }
+
   if (height && (typeof height !== "number" || height <= 0)) {
     return res.status(400).json({ message: "Invalid height value" });
   }
@@ -62,6 +68,10 @@ const validOptions = ["male", "female"];
     if (activity_level) {
       fields.push(`activity_level = $${i++}`);
       values.push(activity_level);
+    }
+     if (physiological_state) {
+      fields.push(`physiological_state = $${i++}`);
+      values.push(physiological_state);
     }
     if (fields.length === 0) {
       return res.status(400).json({ message: "No valid fields to update" });
