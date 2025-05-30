@@ -8,7 +8,7 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const { sex, height, weight, birthday, activity_level } = req.body;
 
-  const validOptions = ["Male", "Female", "Pregnant", "Breastfeeding"];
+const validOptions = ["male", "female"];
   if (sex && !validOptions.includes(sex)) {
     return res.status(400).json({ message: "Invalid sex option" });
   }
