@@ -70,42 +70,54 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+  const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT 
+         users.*,
+         activity_levels.value AS activity_level_label
+       FROM users
+       LEFT JOIN activity_levels 
+       ON users.activity_level_id = activity_levels.id
+       WHERE users.email = $1`,
+      [email]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    try {
-        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
-
-        if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-        if (!user.verified) {
-            return res.status(403).json({ message: 'Please verify your email before logging in.' });
-        }
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
-        res.status(200).json({
-            token,
-            sex: user.sex,
-            birthday: user.birthday,
-            height: user.height,
-            weight: user.weight,
-            activity_level: user.activity_level,
-            physiological_state: user.physiological_state,
-
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
+    if (!user.verified) {
+      return res.status(403).json({ message: 'Please verify your email before logging in.' });
     }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
+
+    res.status(200).json({
+      token,
+      sex: user.sex,
+      birthday: user.birthday,
+      height: user.height,
+      weight: user.weight,
+      activity_level: user.activity_level_label || null, // human-readable label
+      physiological_state: user.physiological_state,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 router.post('/verify-code', async (req, res) => {
     const { email, code } = req.body;
