@@ -93,12 +93,14 @@ router.post('/login', async (req, res) => {
 
         const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '1d' });
         res.status(200).json({
-            token, 
-            sex: user.sex, 
-            birthday: user.birthday, 
-            height: user.height, 
-            weight: user.weight, 
+            token,
+            sex: user.sex,
+            birthday: user.birthday,
+            height: user.height,
+            weight: user.weight,
             activity_level: user.activity_level,
+            physiological_state: user.physiological_state,
+
         });
     } catch (err) {
         console.error(err);
