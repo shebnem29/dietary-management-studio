@@ -6,7 +6,7 @@ const authMiddleware = require("../middleware/auth");
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { sex, height, weight, birthday, activity_level, physiological_state } = req.body;
+  const { sex, height, weight, birthday, activity_level_id, physiological_state } = req.body;
 
   const validOptions = ["male", "female"];
   const validStates = ["none", "pregnant", "breastfeeding", "menopause"];
@@ -39,11 +39,6 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "Invalid birthday value" });
     }
   }
-
-  if (activity_level && !validActivityLevels.includes(activity_level)) {
-    return res.status(400).json({ message: "Invalid activity level" });
-  }
-
   try {
     const fields = [];
     const values = [];
@@ -65,11 +60,11 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
       fields.push(`birthday = $${i++}`);
       values.push(birthday);
     }
-    if (activity_level) {
-      fields.push(`activity_level = $${i++}`);
-      values.push(activity_level);
+    if (activity_level_id) {
+      fields.push(`activity_level_id = $${i++}`);
+      values.push(activity_level_id);
     }
-     if (physiological_state) {
+    if (physiological_state) {
       fields.push(`physiological_state = $${i++}`);
       values.push(physiological_state);
     }
