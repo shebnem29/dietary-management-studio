@@ -6,7 +6,7 @@ const authMiddleware = require("../middleware/auth");
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authMiddleware, async (req, res) => {
   const userId = req.user.id;
-  const { sex, height, weight, birthday, activity_level } = req.body;
+  const { sex, height, weight, birthday, activity_level, physiological_state } = req.body;
 
   const validOptions = ["male", "female"];
   const validStates = ["none", "pregnant", "breastfeeding", "menopause"];
