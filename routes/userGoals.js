@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const authMiddleware = require("../middleware/auth");
+const {authMiddleware} = require("../middleware/auth");
 
 router.patch("/weight", authMiddleware, async (req, res) => {
     const userId = req.user.id;
