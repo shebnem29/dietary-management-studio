@@ -87,7 +87,7 @@ router.get("/me", authMiddleware, async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT sex, height, weight, birthday FROM users WHERE id = $1`,
+      `SELECT sex, height, weight, birthday, activity_level_id FROM users WHERE id = $1`,
       [userId]
     );
 
@@ -111,6 +111,7 @@ router.get("/me", authMiddleware, async (req, res) => {
       height: user.height,
       weight: user.weight,
       age: age,
+      activity_level_id: user.activity_level_id,
     });
   } catch (err) {
     console.error("Fetch User Profile Error:", err);
