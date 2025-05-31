@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require("./routes/users");
 const metadataRoutes = require("./routes/metadata");
 const userGoalsRoutes = require("./routes/userGoals")
+const userMacros = require("./routes/user-macros")
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -23,6 +24,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes);
 app.use("/api/metadata", metadataRoutes);
 app.use("/api/user-goals", userGoalsRoutes)
+app.use("/api/user-macros", userMacros);
 // ✅ Fetch and log categories on server startup
 pool.query('SELECT * FROM categories')
   .then(result => {
