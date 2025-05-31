@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const {authMiddleware} = require("../middleware/auth");
+const { authenticateToken } = require("../middleware/auth");
 
-router.patch("/weight", authMiddleware, async (req, res) => {
+router.patch("/weight", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { goal_weight } = req.body;
 
@@ -23,7 +23,7 @@ router.patch("/weight", authMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-router.get("/weight", authMiddleware, async (req, res) => {
+router.get("/weight", authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     try {
@@ -42,7 +42,7 @@ router.get("/weight", authMiddleware, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
-router.patch("/weekly-rate", authMiddleware, async (req, res) => {
+router.patch("/weekly-rate", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { weekly_rate_kg } = req.body;
 
@@ -100,7 +100,7 @@ router.patch("/weekly-rate", authMiddleware, async (req, res) => {
     }
 });
 
-router.get("/weekly-rate", authMiddleware, async (req, res) => {
+router.get("/weekly-rate", authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     try {

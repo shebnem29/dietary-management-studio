@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const {authMiddleware} = require("../middleware/auth");
+const { authenticateToken } = require("../middleware/auth");
 
 // PATCH /api/users/update-profile
-router.patch("/update-profile", authMiddleware, async (req, res) => {
+router.patch("/update-profile", authenticateToken	, async (req, res) => {
   const userId = req.user.id;
   const { sex, height, weight, birthday, activity_level_id, physiological_state } = req.body;
 
@@ -82,7 +82,7 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-router.get("/me", authMiddleware, async (req, res) => {
+router.get("/me", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {

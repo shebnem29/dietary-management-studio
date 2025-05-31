@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const {authMiddleware} = require("../middleware/auth");
+const { authenticateToken } = require("../middleware/auth");
 // POST or PATCH - save user preference
-router.patch("/", authMiddleware, async (req, res) => {
+router.patch("/", authenticateToken, async (req, res) => {
   const { protein_ratio, fat_ratio, carb_ratio } = req.body;
   const userId = req.user.id;
 
@@ -30,7 +30,7 @@ router.patch("/", authMiddleware, async (req, res) => {
 });
 
 // GET - fetch user's macro preference
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
