@@ -23,7 +23,25 @@ router.patch("/weight", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/weight", authMiddleware, async (req, res) => {
+  const userId = req.user.id;
 
+  try {
+    const result = await db.query(
+      `SELECT goal_weight FROM user_goals WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rowCount === 0 || result.rows[0].goal_weight == null) {
+      return res.status(404).json({ message: "No goal weight found" });
+    }
+
+    res.json({ goal_weight: result.rows[0].goal_weight });
+  } catch (err) {
+    console.error("Fetch Goal Weight Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 router.patch("/weekly-rate", authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const { weekly_rate_kg } = req.body;
