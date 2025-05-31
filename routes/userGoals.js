@@ -105,7 +105,7 @@ router.get("/weekly-rate", authMiddleware, async (req, res) => {
 
     try {
         const userResult = await db.query(
-            `SELECT u.weight, g.goal_weight, g.weekly_rate_kg
+            `SELECT u.weight, g.goal_weight, g.weekly_rate_kg, g.created_at
        FROM users u
        JOIN user_goals g ON u.id = g.user_id
        WHERE u.id = $1`,
@@ -116,13 +116,13 @@ router.get("/weekly-rate", authMiddleware, async (req, res) => {
             return res.status(404).json({ message: "User or goal not found" });
         }
 
-        const { weight, goal_weight, weekly_rate_kg } = userResult.rows[0];
+        const { weight, goal_weight, weekly_rate_kg, created_at } = userResult.rows[0];
 
         let goalType = "maintenance";
         if (goal_weight < weight) goalType = "cut";
         else if (goal_weight > weight) goalType = "bulk";
 
-        res.json({ goalType, weekly_rate_kg });
+        res.json({ goalType, weekly_rate_kg, goal_weight, created_at });
     } catch (err) {
         console.error("Weekly Rate Fetch Error:", err);
         res.status(500).json({ message: "Server error" });
