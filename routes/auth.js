@@ -111,7 +111,7 @@ router.post('/login', async (req, res) => {
       birthday: user.birthday,
       height: user.height,
       weight: user.weight,
-      activity_level: user.activity_level_label || null, // human-readable label
+  activity_level_id: user.activity_level_id, 
       physiological_state: user.physiological_state,
     });
   } catch (err) {
