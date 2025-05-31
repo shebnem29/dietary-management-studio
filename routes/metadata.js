@@ -6,7 +6,7 @@ const db = require("../db");
 router.get("/activity-levels", async (req, res) => {
   try {
     const result = await db.query(
-      "SELECT id, label, value, description, example FROM activity_levels ORDER BY id"
+      "SELECT id, label, value, description, example, multiplier FROM activity_levels ORDER BY id"
     );
     res.status(200).json(result.rows);
   } catch (err) {
