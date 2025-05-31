@@ -1,3 +1,7 @@
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+const authMiddleware = require("../middleware/auth");
 // POST or PATCH - save user preference
 router.patch("/", authMiddleware, async (req, res) => {
   const { protein_ratio, fat_ratio, carb_ratio } = req.body;
