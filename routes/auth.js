@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const sgMail = require('@sendgrid/mail');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;;
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
