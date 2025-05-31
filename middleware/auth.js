@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 require('dotenv').config();
 
-module.exports = (req, res, next) => {
+function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -9,16 +9,18 @@ module.exports = (req, res, next) => {
   }
 
   const token = authHeader.split(" ")[1];
-  console.log("🪙 Received Token:", token); // ← Log the raw token
-  console.log("🔐 JWT Secret:", process.env.JWT_SECRET); // ← Log the secret being used
+  console.log("🪙 Received Token:", token);
+  console.log("🔐 JWT Secret:", process.env.JWT_SECRET);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("✅ Decoded Token:", decoded); // ← Log decoded token
+    console.log("✅ Decoded Token:", decoded);
     req.user = decoded;
     next();
   } catch (err) {
     console.error("❌ JWT Verification Error:", err.message);
     return res.status(401).json({ message: "Invalid token" });
   }
-};
+}
+
+module.exports = { authenticateToken };
