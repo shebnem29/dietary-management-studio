@@ -78,15 +78,14 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT 
-         users.*,
-         activity_levels.value AS activity_level_label
-       FROM users
-       LEFT JOIN activity_levels 
-       ON users.activity_level_id = activity_levels.id
-       WHERE users.email = $1`,
-      [email]
-    );
+      `SELECT u.id, u.email, u.sex, u.birthday, u.height, u.weight, u.activity_level_id,
+         g.goal_weight, g.weekly_rate_kg,
+         m.protein_ratio
+  FROM users u
+  LEFT JOIN user_goals g ON u.id = g.user_id
+  LEFT JOIN user_macros m ON u.id = m.user_id
+  WHERE u.email = $1
+`, [email]);
 
     const user = result.rows[0];
 
@@ -113,6 +112,12 @@ router.post('/login', async (req, res) => {
       weight: user.weight,
   activity_level_id: user.activity_level_id, 
       physiological_state: user.physiological_state,
+       goal_weight: user.goal_weight,
+  weekly_rate_kg: user.weekly_rate_kg,
+  macro_set:
+    user.protein_ratio !== null &&
+    user.fat_ratio !== null &&
+    user.carb_ratio !== null,
     });
   } catch (err) {
     console.error(err);
