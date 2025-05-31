@@ -78,9 +78,10 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT u.id, u.email, u.sex, u.birthday, u.height, u.weight, u.activity_level_id,
-         g.goal_weight, g.weekly_rate_kg,
-         m.protein_ratio
+      `SELECT u.id, u.email, u.password, u.verified, u.sex, u.birthday, u.height, u.weight, u.activity_level_id,
+       g.goal_weight, g.weekly_rate_kg,
+       m.protein_ratio, m.fat_ratio, m.carb_ratio
+
   FROM users u
   LEFT JOIN user_goals g ON u.id = g.user_id
   LEFT JOIN user_macros m ON u.id = m.user_id
