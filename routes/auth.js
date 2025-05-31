@@ -173,4 +173,21 @@ router.post('/resend-code', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+router.get('/account-details', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT name, email FROM users WHERE id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
