@@ -82,5 +82,39 @@ router.patch("/update-profile", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/me", authMiddleware, async (req, res) => {
+  const userId = req.user.id;
 
+  try {
+    const result = await db.query(
+      `SELECT sex, height, weight, birthday FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = result.rows[0];
+
+    // Calculate age from birthday
+    const birthDate = new Date(user.birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    res.json({
+      sex: user.sex,
+      height: user.height,
+      weight: user.weight,
+      age: age,
+    });
+  } catch (err) {
+    console.error("Fetch User Profile Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 module.exports = router;
