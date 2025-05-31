@@ -6,7 +6,7 @@ const recipesRoute = require('./routes/recipes')
 const authRoutes = require('./routes/auth');
 const userRoutes = require("./routes/users");
 const metadataRoutes = require("./routes/metadata");
-
+const userGoalsRoutes = require("./routes/userGoals")
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -22,7 +22,7 @@ app.use('/recipes', recipesRoute)
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes);
 app.use("/api/metadata", metadataRoutes);
-
+app.use("/api/user-goals", userGoalsRoutes)
 // ✅ Fetch and log categories on server startup
 pool.query('SELECT * FROM categories')
   .then(result => {
