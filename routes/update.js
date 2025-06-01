@@ -59,4 +59,33 @@ router.patch('/password', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+router.patch('/weight', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { weight, bmi, bodyFat } = req.body;
+
+  if (!weight) {
+    return res.status(400).json({ message: 'Weight is required' });
+  }
+
+  try {
+    // 1. Insert into user_stats
+    await db.query(
+      `INSERT INTO user_stats (user_id, weight, bmi, body_fat)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, weight, bmi || null, bodyFat || null]
+    );
+
+    // 2. Update the users table with latest weight
+    await db.query(
+      `UPDATE users SET weight = $1 WHERE id = $2`,
+      [weight, userId]
+    );
+
+    res.status(200).json({ message: 'Weight updated and tracked successfully' });
+  } catch (err) {
+    console.error('Error updating weight:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
