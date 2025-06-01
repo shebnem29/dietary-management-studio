@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const bcrypt = require('bcryptjs');
 
 // PATCH - Update user name or email
 router.patch('/', authenticateToken, async (req, res) => {
