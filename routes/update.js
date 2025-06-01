@@ -60,45 +60,79 @@ router.patch('/password', authenticateToken, async (req, res) => {
   }
 });
 
+const log10 = (x) => Math.log(x) / Math.log(10);
+
 router.patch('/weight', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const { weight, bodyFat } = req.body;
+  const { weight, bodyFat: incomingBodyFat } = req.body;
 
   if (!weight) {
     return res.status(400).json({ message: 'Weight is required' });
   }
 
   try {
-    // Fetch user's height
-    const userResult = await db.query('SELECT height FROM users WHERE id = $1', [userId]);
-    const user = userResult.rows[0];
+    // Fetch user's body metrics
+    const userRes = await db.query(
+      `SELECT height, sex, neck, waist, hip FROM users WHERE id = $1`,
+      [userId]
+    );
+    const user = userRes.rows[0];
 
     if (!user || !user.height) {
-      return res.status(400).json({ message: 'User height is missing or not set' });
+      return res.status(400).json({ message: 'User profile is incomplete' });
     }
 
-    const heightCm = user.height;
-    const heightM = heightCm / 100;
-    const bmi = +(weight / (heightM * heightM)).toFixed(1); // Rounded to 1 decimal
+    const heightM = user.height / 100;
+    const bmi = +(weight / (heightM * heightM)).toFixed(1);
 
-    // Insert into user_stats
+    // Calculate body fat if not provided
+    let bodyFat = incomingBodyFat ?? null;
+
+    if (!bodyFat && user.neck && user.waist && user.sex) {
+      try {
+        if (user.sex === 'male') {
+          bodyFat =
+            495 /
+              (1.0324 -
+                0.19077 * log10(user.waist - user.neck) +
+                0.15456 * log10(user.height)) -
+            450;
+        } else if (user.sex === 'female' && user.hip) {
+          bodyFat =
+            495 /
+              (1.29579 -
+                0.35004 * log10(user.waist + user.hip - user.neck) +
+                0.22100 * log10(user.height)) -
+            450;
+        }
+
+        if (bodyFat) {
+          bodyFat = +bodyFat.toFixed(1);
+        }
+      } catch (calcErr) {
+        console.warn('Body fat calculation failed:', calcErr.message);
+        bodyFat = null;
+      }
+    }
+
+    // Save to user_stats
     await db.query(
       `INSERT INTO user_stats (user_id, weight, bmi, body_fat)
        VALUES ($1, $2, $3, $4)`,
-      [userId, weight, bmi, bodyFat || null]
+      [userId, weight, bmi, bodyFat]
     );
 
-    // Update users table with latest weight
-    await db.query(
-      `UPDATE users SET weight = $1 WHERE id = $2`,
-      [weight, userId]
-    );
+    await db.query(`UPDATE users SET weight = $1 WHERE id = $2`, [
+      weight,
+      userId,
+    ]);
 
-    res.status(200).json({ message: 'Weight and BMI updated successfully' });
+    res.status(200).json({ message: 'Weight, BMI, and body fat updated' });
   } catch (err) {
     console.error('Error updating weight:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 module.exports = router;
