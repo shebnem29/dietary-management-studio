@@ -38,5 +38,24 @@ router.patch('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.patch('/password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
 
+  try {
+    const userRes = await db.query('SELECT password FROM users WHERE id = $1', [req.user.id]);
+    const user = userRes.rows[0];
+
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedNew, req.user.id]);
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Password update error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
