@@ -62,30 +62,43 @@ router.patch('/password', authenticateToken, async (req, res) => {
 
 router.patch('/weight', authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const { weight, bmi, bodyFat } = req.body;
+  const { weight, bodyFat } = req.body;
 
   if (!weight) {
     return res.status(400).json({ message: 'Weight is required' });
   }
 
   try {
-    // 1. Insert into user_stats
+    // Fetch user's height
+    const userResult = await db.query('SELECT height FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
+
+    if (!user || !user.height) {
+      return res.status(400).json({ message: 'User height is missing or not set' });
+    }
+
+    const heightCm = user.height;
+    const heightM = heightCm / 100;
+    const bmi = +(weight / (heightM * heightM)).toFixed(1); // Rounded to 1 decimal
+
+    // Insert into user_stats
     await db.query(
       `INSERT INTO user_stats (user_id, weight, bmi, body_fat)
        VALUES ($1, $2, $3, $4)`,
-      [userId, weight, bmi || null, bodyFat || null]
+      [userId, weight, bmi, bodyFat || null]
     );
 
-    // 2. Update the users table with latest weight
+    // Update users table with latest weight
     await db.query(
       `UPDATE users SET weight = $1 WHERE id = $2`,
       [weight, userId]
     );
 
-    res.status(200).json({ message: 'Weight updated and tracked successfully' });
+    res.status(200).json({ message: 'Weight and BMI updated successfully' });
   } catch (err) {
     console.error('Error updating weight:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 module.exports = router;
