@@ -2,6 +2,16 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
+function calculateAge(dateStr) {
+    const birthDate = new Date(dateStr);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
 
 router.patch("/weight", authenticateToken, async (req, res) => {
     const userId = req.user.id;
@@ -129,58 +139,63 @@ router.get("/weekly-rate", authenticateToken, async (req, res) => {
     }
 });
 router.get("/energy-summary", authenticateToken, async (req, res) => {
-  const userId = req.user.id;
+    const userId = req.user.id;
 
-  try {
-    // 1. Fetch user info
-    const userResult = await db.query(
-      `SELECT weight, height, birthday, sex, activity_level_id FROM users WHERE id = $1`,
-      [userId]
-    );
-    const user = userResult.rows[0];
-    if (!user) return res.status(404).json({ message: "User not found" });
+    try {
+        // 1. Fetch user info
+        const userResult = await db.query(
+            `SELECT weight, height, birthday, sex, activity_level_id FROM users WHERE id = $1`,
+            [userId]
+        );
+        const user = userResult.rows[0];
+        if (!user) return res.status(404).json({ message: "User not found" });
 
-    // 2. Fetch goal info
-    const goalResult = await db.query(
-      `SELECT goal_weight, weekly_rate_kg, created_at FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
-    const goal = goalResult.rows[0];
-    if (!goal) return res.status(404).json({ message: "User goal not found" });
+        // 2. Fetch goal info
+        const goalResult = await db.query(
+            `SELECT goal_weight, weekly_rate_kg, created_at FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+            [userId]
+        );
+        const goal = goalResult.rows[0];
+        if (!goal) return res.status(404).json({ message: "User goal not found" });
 
-    const { weight, height, birthday, sex, activity_level_id } = user;
-    const { weekly_rate_kg, created_at, goal_weight } = goal;
-    const heightMeters = height / 100;
-    const bmr = sex === "male"
-      ? 10 * weight + 6.25 * height - 5 * birthday + 5
-      : 10 * weight + 6.25 * height - 5 * birthday - 161;
+        const { weight, height, birthday, sex, activity_level_id } = user;
+        const { weekly_rate_kg, created_at, goal_weight } = goal;
+        const age = calculateAge(birthday); // ✅ compute age
 
-    const activityResult = await db.query(
-      `SELECT multiplier FROM activity_levels WHERE id = $1`,
-      [activity_level_id]
-    );
-    const multiplier = activityResult.rows[0]?.multiplier ?? 1.2;
-    const tdee = bmr * multiplier;
+        if (!age || isNaN(age)) {
+            return res.status(400).json({ message: "Invalid birthday or age" });
+        }
+        const heightMeters = height / 100;
+        const bmr = sex === "male"
+            ? 10 * weight + 6.25 * height - 5 * age + 5
+            : 10 * weight + 6.25 * height - 5 * age - 161;
 
-    const dailyCalChange = (weekly_rate_kg || 0) * 7700 / 7;
-    const energyTarget = tdee + dailyCalChange;
-    const deficit = Math.round(energyTarget - tdee);
+        const activityResult = await db.query(
+            `SELECT multiplier FROM activity_levels WHERE id = $1`,
+            [activity_level_id]
+        );
+        const multiplier = activityResult.rows[0]?.multiplier ?? 1.2;
+        const tdee = bmr * multiplier;
 
-    res.json({
-        userId,
-      weight,
-        height,
-        birthday,
+        const dailyCalChange = (weekly_rate_kg || 0) * 7700 / 7;
+        const energyTarget = tdee + dailyCalChange;
+        const deficit = Math.round(energyTarget - tdee);
 
-      bmr: Math.round(bmr),
-      tdee: Math.round(tdee),
-      energyTarget: Math.round(energyTarget),
-      energyDeficit: Math.round(deficit),
-      goalType: goal_weight < weight ? "cut" : goal_weight > weight ? "bulk" : "maintenance",
-    });
-  } catch (err) {
-    console.error("Error in /energy-summary:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+        res.json({
+            userId,
+            weight,
+            height,
+            birthday,
+
+            bmr: Math.round(bmr),
+            tdee: Math.round(tdee),
+            energyTarget: Math.round(energyTarget),
+            energyDeficit: Math.round(deficit),
+            goalType: goal_weight < weight ? "cut" : goal_weight > weight ? "bulk" : "maintenance",
+        });
+    } catch (err) {
+        console.error("Error in /energy-summary:", err);
+        res.status(500).json({ message: "Server error" });
+    }
 });
 module.exports = router;
