@@ -150,7 +150,6 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
 
     const { weight, height, birthday, sex, activity_level_id } = user;
     const { weekly_rate_kg, created_at, goal_weight } = goal;
-
     const heightMeters = height / 100;
     const bmr = sex === "male"
       ? 10 * weight + 6.25 * height - 5 * birthday + 5
@@ -168,6 +167,11 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
     const deficit = Math.round(energyTarget - tdee);
 
     res.json({
+        userId,
+      weight,
+        height,
+        birthday,
+
       bmr: Math.round(bmr),
       tdee: Math.round(tdee),
       energyTarget: Math.round(energyTarget),
