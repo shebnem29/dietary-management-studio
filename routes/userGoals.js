@@ -134,7 +134,7 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
   try {
     // 1. Fetch user info
     const userResult = await db.query(
-      `SELECT weight, height, age, sex, activity_level_id FROM users WHERE id = $1`,
+      `SELECT weight, height, birthday, sex, activity_level_id FROM users WHERE id = $1`,
       [userId]
     );
     const user = userResult.rows[0];
@@ -148,13 +148,13 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
     const goal = goalResult.rows[0];
     if (!goal) return res.status(404).json({ message: "User goal not found" });
 
-    const { weight, height, age, sex, activity_level_id } = user;
+    const { weight, height, birthday, sex, activity_level_id } = user;
     const { weekly_rate_kg, created_at, goal_weight } = goal;
 
     const heightMeters = height / 100;
     const bmr = sex === "male"
-      ? 10 * weight + 6.25 * height - 5 * age + 5
-      : 10 * weight + 6.25 * height - 5 * age - 161;
+      ? 10 * weight + 6.25 * height - 5 * birthday + 5
+      : 10 * weight + 6.25 * height - 5 * birthday - 161;
 
     const activityResult = await db.query(
       `SELECT multiplier FROM activity_levels WHERE id = $1`,
