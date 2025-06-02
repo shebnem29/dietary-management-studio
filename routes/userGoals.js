@@ -194,4 +194,29 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         res.status(500).json({ message: "Server error" });
     }
 });
+router.post("/weight-goal-tracking", authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { goal_weight, weekly_rate_kg, goalType } = req.body;
+
+    if (
+        !goal_weight || typeof goal_weight !== "number" || goal_weight <= 0 ||
+        !weekly_rate_kg || typeof weekly_rate_kg !== "number" ||
+        !goalType || !["cut", "bulk", "maintenance"].includes(goalType)
+    ) {
+        return res.status(400).json({ message: "Invalid goal data" });
+    }
+
+    try {
+        await db.query(
+            `INSERT INTO user_goals (user_id, goal_weight, weekly_rate_kg, goalType)
+             VALUES ($1, $2, $3, $4)`,
+            [userId, goal_weight, weekly_rate_kg, goalType]
+        );
+
+        res.status(201).json({ message: "New goal created" });
+    } catch (err) {
+        console.error("Goal Creation Error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
 module.exports = router;
