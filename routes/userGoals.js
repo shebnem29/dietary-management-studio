@@ -210,7 +210,7 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         const { goal_weight, weekly_rate_kg = 0, created_at } = goal;
 
         const goalType = goal_weight < weight ? "cut" : goal_weight > weight ? "bulk" : "maintenance";
-        const dailyCalChange = (weekly_rate_kg || 0) * 7700 / 7;
+        const dailyCalChange = weekly_rate_kg * 7700 / 7;
         const energyTarget = tdee + dailyCalChange;
         const deficit = Math.round(energyTarget - tdee);
 
@@ -223,8 +223,8 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
             forecastDate = forecast.toDateString();
         }
 
-        // 4. Macros
-        const macroRes = await db.query(`SELECT * FROM macro_options`);
+        // 4. Macros using diet_presets
+        const macroRes = await db.query(`SELECT * FROM diet_presets`);
         const macroOptions = macroRes.rows.map(opt => ({
             name: opt.name,
             protein: Math.round((energyTarget * opt.protein_ratio) / 4),
