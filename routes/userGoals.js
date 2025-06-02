@@ -182,22 +182,12 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         const user = userResult.rows[0];
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // 2. Fetch goal info
-        const goalResult = await db.query(
-            `SELECT goal_weight, weekly_rate_kg, created_at FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-            [userId]
-        );
-        const goal = goalResult.rows[0];
-        if (!goal) return res.status(404).json({ message: "User goal not found" });
-
         const { weight, height, birthday, sex, activity_level_id } = user;
-        const { weekly_rate_kg, created_at, goal_weight } = goal;
-        const age = calculateAge(birthday); // ✅ compute age
 
-        if (!age || isNaN(age)) {
-            return res.status(400).json({ message: "Invalid birthday or age" });
-        }
+        const age = calculateAge(birthday);
         const heightMeters = height / 100;
+        const bmi = weight / (heightMeters * heightMeters);
+
         const bmr = sex === "male"
             ? 10 * weight + 6.25 * height - 5 * age + 5
             : 10 * weight + 6.25 * height - 5 * age - 161;
@@ -209,23 +199,63 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         const multiplier = activityResult.rows[0]?.multiplier ?? 1.2;
         const tdee = bmr * multiplier;
 
+        // 2. Fetch latest goal
+        const goalResult = await db.query(
+            `SELECT goal_weight, weekly_rate_kg, created_at FROM user_goals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+            [userId]
+        );
+        const goal = goalResult.rows[0];
+        if (!goal) return res.status(404).json({ message: "User goal not found" });
+
+        const { goal_weight, weekly_rate_kg = 0, created_at } = goal;
+
+        const goalType = goal_weight < weight ? "cut" : goal_weight > weight ? "bulk" : "maintenance";
         const dailyCalChange = (weekly_rate_kg || 0) * 7700 / 7;
         const energyTarget = tdee + dailyCalChange;
         const deficit = Math.round(energyTarget - tdee);
 
+        // 3. Forecast date
+        let forecastDate = null;
+        if (goalType !== "maintenance" && weekly_rate_kg !== 0 && weight !== goal_weight) {
+            const weeks = Math.abs((weight - goal_weight) / weekly_rate_kg);
+            const forecast = new Date(created_at);
+            forecast.setDate(forecast.getDate() + Math.round(weeks * 7));
+            forecastDate = forecast.toDateString();
+        }
+
+        // 4. Macros
+        const macroRes = await db.query(`SELECT * FROM macro_options`);
+        const macroOptions = macroRes.rows.map(opt => ({
+            name: opt.name,
+            protein: Math.round((energyTarget * opt.protein_ratio) / 4),
+            fats: Math.round((energyTarget * opt.fat_ratio) / 9),
+            carbs: Math.round((energyTarget * opt.carb_ratio) / 4),
+        }));
+
         res.json({
-           
+            user: {
+                sex,
+                age,
+                height,
+                weight,
+                bmi: parseFloat(bmi.toFixed(1))
+            },
             bmr: Math.round(bmr),
             tdee: Math.round(tdee),
             energyTarget: Math.round(energyTarget),
-            energyDeficit: Math.round(deficit),
-            goalType: goal_weight < weight ? "cut" : goal_weight > weight ? "bulk" : "maintenance",
+            energyDeficit: deficit,
+            goalType,
+            weekly_rate_kg,
+            goal_weight,
+            forecastDate,
+            macroOptions
         });
     } catch (err) {
         console.error("Error in /energy-summary:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
+
 router.post("/weight-goal-tracking", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const { goal_weight, weekly_rate_kg } = req.body;
