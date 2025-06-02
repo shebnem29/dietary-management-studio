@@ -27,8 +27,23 @@ router.get('/last-body-metrics', authenticateToken, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const { rows } = await db.query(
-      `SELECT bmi, body_fat, created_at
+    // Get user profile info
+    const userResult = await db.query(
+      'SELECT weight, height FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const user = userResult.rows[0];
+    if (!user || !user.weight || !user.height) {
+      return res.status(400).json({ message: 'Incomplete user profile data' });
+    }
+
+    const heightInMeters = user.height / 100;
+    const bmi = user.weight / (heightInMeters * heightInMeters);
+
+    // Try to get optional body fat from user_stats if exists
+    const statsResult = await db.query(
+      `SELECT body_fat, created_at
        FROM user_stats
        WHERE user_id = $1
        ORDER BY created_at DESC
@@ -36,14 +51,17 @@ router.get('/last-body-metrics', authenticateToken, async (req, res) => {
       [userId]
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No body metrics found for user' });
-    }
+    const bodyFatData = statsResult.rows[0] || {};
 
-    res.json(rows[0]);
+    res.json({
+      bmi: parseFloat(bmi.toFixed(1)),
+      body_fat: bodyFatData.body_fat ?? null,
+      created_at: bodyFatData.created_at ?? null,
+    });
   } catch (err) {
-    console.error('Error fetching last body metrics:', err);
+    console.error('Error fetching body metrics:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 module.exports = router;
