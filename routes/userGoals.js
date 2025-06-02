@@ -82,90 +82,93 @@ router.get("/weight", authenticateToken, async (req, res) => {
     }
 });
 router.patch("/weekly-rate", authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const { weekly_rate_kg } = req.body;
+  const userId = req.user.id;
+  const { weekly_rate_kg } = req.body;
 
-    if (typeof weekly_rate_kg !== "number") {
-        return res.status(400).json({ message: "Invalid weekly rate" });
+  if (typeof weekly_rate_kg !== "number") {
+    return res.status(400).json({ message: "Invalid weekly rate" });
+  }
+
+  try {
+    // Fetch most recent goal and its goalType
+    const result = await db.query(
+      `SELECT g.id AS goal_id, g.weekly_rate_kg AS existing_rate, gt.name AS goalType
+       FROM user_goals g
+       JOIN goal_types gt ON g.goal_type_id = gt.id
+       WHERE g.user_id = $1
+       ORDER BY g.created_at DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User goal not found" });
     }
 
-    try {
-        // Get current and goal weight
-        const userResult = await db.query(
-            `SELECT u.weight, g.goal_weight, g.weekly_rate_kg
-       FROM users u
-       JOIN user_goals g ON u.id = g.user_id
-       WHERE u.id = $1`,
-            [userId]
-        );
+    const { goal_id, existing_rate, goaltype } = result.rows[0];
 
-        if (userResult.rowCount === 0) {
-            return res.status(404).json({ message: "User or goal not found" });
-        }
-
-        const { weight, goal_weight, weekly_rate_kg: existingRate } = userResult.rows[0];
-
-        // Determine goal type
-        let goalType = "maintenance";
-        if (goal_weight < weight) goalType = "cut";
-        else if (goal_weight > weight) goalType = "bulk";
-
-        // Allow unchanged rate to pass without error
-        if (weekly_rate_kg === existingRate) {
-            return res.json({ message: "Weekly rate unchanged", goalType });
-        }
-
-        // Validate rate based on goal type
-        // Validate realistic physical limits
-        if (
-            (goalType === "cut" && (weekly_rate_kg < -1 || weekly_rate_kg > -0.1)) ||
-            (goalType === "bulk" && (weekly_rate_kg < 0.1 || weekly_rate_kg > 0.5)) ||
-            (goalType === "maintenance" && weekly_rate_kg !== 0)
-        ) {
-            return res.status(400).json({ message: `Unrealistic weekly rate for ${goalType} goal` });
-        }
-
-
-        // Save to DB
-        await db.query(
-            `UPDATE user_goals SET weekly_rate_kg = $1 WHERE user_id = $2`,
-            [weekly_rate_kg, userId]
-        );
-
-        res.json({ message: "Weekly rate updated successfully", goalType });
-    } catch (err) {
-        console.error("Weekly Rate Update Error:", err);
-        res.status(500).json({ message: "Server error" });
+    // If unchanged, short-circuit
+    if (weekly_rate_kg === existing_rate) {
+      return res.json({ message: "Weekly rate unchanged", goalType: goaltype });
     }
+
+    // Validate based on goal type
+    const limits = {
+      cut: { min: -1.0, max: -0.1 },
+      bulk: { min: 0.1, max: 0.5 },
+      maintenance: { min: 0, max: 0 },
+    };
+
+    const range = limits[goaltype];
+    if (!range || weekly_rate_kg < range.min || weekly_rate_kg > range.max) {
+      return res.status(400).json({ message: `Unrealistic weekly rate for ${goaltype} goal` });
+    }
+
+    // Update that specific goal
+    await db.query(
+      `UPDATE user_goals SET weekly_rate_kg = $1 WHERE id = $2`,
+      [weekly_rate_kg, goal_id]
+    );
+
+    res.json({ message: "Weekly rate updated successfully", goalType: goaltype });
+  } catch (err) {
+    console.error("Weekly Rate Update Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-router.get("/weekly-rate", authenticateToken, async (req, res) => {
-    const userId = req.user.id;
 
-    try {
-        const userResult = await db.query(
-            `SELECT u.weight, g.goal_weight, g.weekly_rate_kg, g.created_at
+router.get("/weekly-rate", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await db.query(
+      `SELECT u.weight, g.goal_weight, g.weekly_rate_kg, g.created_at, gt.name AS goalType
        FROM users u
        JOIN user_goals g ON u.id = g.user_id
-       WHERE u.id = $1`,
-            [userId]
-        );
+       JOIN goal_types gt ON g.goal_type_id = gt.id
+       WHERE u.id = $1
+       ORDER BY g.created_at DESC
+       LIMIT 1`,
+      [userId]
+    );
 
-        if (userResult.rowCount === 0) {
-            return res.status(404).json({ message: "User or goal not found" });
-        }
-
-        const { weight, goal_weight, weekly_rate_kg, created_at } = userResult.rows[0];
-
-        let goalType = "maintenance";
-        if (goal_weight < weight) goalType = "cut";
-        else if (goal_weight > weight) goalType = "bulk";
-
-        res.json({ goalType, weekly_rate_kg, goal_weight, created_at });
-    } catch (err) {
-        console.error("Weekly Rate Fetch Error:", err);
-        res.status(500).json({ message: "Server error" });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User or goal not found" });
     }
+
+    const { weight, goal_weight, weekly_rate_kg, created_at, goaltype } = result.rows[0];
+
+    res.json({
+      goalType: goaltype, // already "cut", "bulk", or "maintenance"
+      weekly_rate_kg,
+      goal_weight,
+      created_at,
+    });
+  } catch (err) {
+    console.error("Weekly Rate Fetch Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 router.get("/energy-summary", authenticateToken, async (req, res) => {
     const userId = req.user.id;
