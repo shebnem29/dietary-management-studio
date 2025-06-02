@@ -63,5 +63,22 @@ router.get('/last-body-metrics', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/history', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
+  try {
+    const result = await db.query(
+      `SELECT weight, created_at
+       FROM user_stats
+       WHERE user_id = $1 AND weight IS NOT NULL
+       ORDER BY created_at ASC`,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching weight history:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;

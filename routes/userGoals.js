@@ -182,11 +182,7 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         const deficit = Math.round(energyTarget - tdee);
 
         res.json({
-            userId,
-            weight,
-            height,
-            birthday,
-
+           
             bmr: Math.round(bmr),
             tdee: Math.round(tdee),
             energyTarget: Math.round(energyTarget),
