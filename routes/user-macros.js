@@ -19,7 +19,7 @@ router.patch("/", authenticateToken, async (req, res) => {
     if (existing.rowCount > 0) {
       await db.query(
         `UPDATE user_macros 
-         SET protein_ratio = $1, fat_ratio = $2, carb_ratio = $3, updated_at = NOW() 
+         SET protein_ratio = $1, fat_ratio = $2, carb_ratio = $3, created_at = NOW() 
          WHERE user_id = $4`,
         [protein_ratio, fat_ratio, carb_ratio, userId]
       );
