@@ -10,13 +10,7 @@ router.patch("/update-profile", authenticateToken	, async (req, res) => {
 
   const validOptions = ["male", "female"];
   const validStates = ["none", "pregnant", "breastfeeding", "menopause"];
-  const validActivityLevels = [
-    "Sedentary (office job)",
-    "Light Exercise (1-2 days/week)",
-    "Moderate Exercise (3-5 days/week)",
-    "Heavy Exercise (6-7 days/week)",
-    "Athlete (2x per day)",
-  ];
+
   if (sex && !validOptions.includes(sex)) {
     return res.status(400).json({ message: "Invalid sex option" });
   }

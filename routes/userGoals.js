@@ -14,24 +14,53 @@ function calculateAge(dateStr) {
 }
 
 router.patch("/weight", authenticateToken, async (req, res) => {
-    const userId = req.user.id;
-    const { goal_weight } = req.body;
+  const userId = req.user.id;
+  const { goal_weight } = req.body;
 
-    if (!goal_weight || typeof goal_weight !== "number" || goal_weight <= 0) {
-        return res.status(400).json({ message: "Invalid goal weight" });
+  if (!goal_weight || typeof goal_weight !== "number" || goal_weight <= 0) {
+    return res.status(400).json({ message: "Invalid goal weight" });
+  }
+
+  try {
+    // 1. Get current user weight
+    const userResult = await db.query(
+      "SELECT weight FROM users WHERE id = $1",
+      [userId]
+    );
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
     }
 
-    try {
-        await db.query(
-            "INSERT INTO user_goals (user_id, goal_weight) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET goal_weight = EXCLUDED.goal_weight",
-            [userId, goal_weight]
-        );
+    const currentWeight = userResult.rows[0].weight;
 
-        res.json({ message: "Goal weight updated successfully" });
-    } catch (err) {
-        console.error("Goal Weight Update Error:", err);
-        res.status(500).json({ message: "Server error" });
+    // 2. Determine goal type
+    let goalType = "maintenance";
+    if (goal_weight < currentWeight) goalType = "cut";
+    else if (goal_weight > currentWeight) goalType = "bulk";
+
+    // 3. Get goal_type_id from goal_types table
+    const typeResult = await db.query(
+      "SELECT id FROM goal_types WHERE name = $1",
+      [goalType]
+    );
+    if (typeResult.rowCount === 0) {
+      return res.status(400).json({ message: "Invalid goal type" });
     }
+
+    const goal_type_id = typeResult.rows[0].id;
+
+    // 4. Insert new goal record
+    await db.query(
+      `INSERT INTO user_goals (user_id, goal_weight, goal_type_id)
+       VALUES ($1, $2, $3)`,
+      [userId, goal_weight, goal_type_id]
+    );
+
+    res.json({ message: "Goal weight created", goalType });
+  } catch (err) {
+    console.error("Goal Weight Update Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 router.get("/weight", authenticateToken, async (req, res) => {
     const userId = req.user.id;
@@ -196,7 +225,7 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
 });
 router.post("/weight-goal-tracking", authenticateToken, async (req, res) => {
     const userId = req.user.id;
-    const { goal_weight, weekly_rate_kg, goalType } = req.body;
+    const { goal_weight, weekly_rate_kg } = req.body;
 
     if (
         !goal_weight || typeof goal_weight !== "number" || goal_weight <= 0 ||
@@ -208,9 +237,9 @@ router.post("/weight-goal-tracking", authenticateToken, async (req, res) => {
 
     try {
         await db.query(
-            `INSERT INTO user_goals (user_id, goal_weight, weekly_rate_kg, goalType)
+            `INSERT INTO user_goals (user_id, goal_weight, weekly_rate_kg)
              VALUES ($1, $2, $3, $4)`,
-            [userId, goal_weight, weekly_rate_kg, goalType]
+            [userId, goal_weight, weekly_rate_kg]
         );
 
         res.status(201).json({ message: "New goal created" });
