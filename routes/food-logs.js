@@ -34,15 +34,17 @@ router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
+    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
     const result = await pool.query(
       `
       SELECT fl.id, fl.meal_type, fl.quantity, fl.unit, fl.date, f.name AS food_name
       FROM food_logs fl
       JOIN foods f ON fl.food_id = f.id
-      WHERE fl.user_id = $1
-      ORDER BY fl.date DESC, fl.meal_type
+      WHERE fl.user_id = $1 AND fl.date = $2
+      ORDER BY fl.meal_type, fl.created_at
       `,
-      [user_id]
+      [user_id, today]
     );
 
     res.json(result.rows);
@@ -51,4 +53,5 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error fetching food logs' });
   }
 });
+
 module.exports = router;
