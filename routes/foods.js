@@ -10,10 +10,10 @@ router.get('/', async (req, res) => {
       return res.status(400).json({ error: 'Search query too short' });
     }
 
-    const result = await pool.query(
-      `SELECT id, name FROM foods WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 20`,
-      [`%${search}%`]
-    );
+   const result = await pool.query(
+  `SELECT id, name, nutrients FROM foods WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 20`,
+  [`%${search}%`]
+);
 
     res.json(result.rows);
   } catch (err) {
