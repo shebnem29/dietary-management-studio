@@ -10,6 +10,8 @@ const userGoalsRoutes = require("./routes/userGoals")
 const userMacros = require("./routes/user-macros")
 const updateRoutes = require('./routes/update');
 const userStatsRoutes = require('./routes/userStats');
+const nutrientLabelRoutes = require('./routes/nutrientLabels');
+
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -29,6 +31,8 @@ app.use("/api/user-goals", userGoalsRoutes)
 app.use("/api/user-macros", userMacros);
 app.use('/api/account', updateRoutes);
 app.use('/api/user-stats', userStatsRoutes);
+app.use('/api/nutrient-labels', nutrientLabelRoutes);
+
 
 // ✅ Fetch and log categories on server startup
 pool.query('SELECT * FROM categories')
