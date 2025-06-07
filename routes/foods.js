@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     }
 
    const result = await pool.query(
-  `SELECT id, name, nutrients FROM foods WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 20`,
+  `SELECT id, name, nutrients, serving_size_g FROM foods WHERE LOWER(name) LIKE LOWER($1) ORDER BY name LIMIT 20`,
   [`%${search}%`]
 );
 
