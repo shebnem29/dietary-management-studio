@@ -30,5 +30,25 @@ router.post('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error adding food log' });
   }
 });
+router.get('/', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
 
+  try {
+    const result = await pool.query(
+      `
+      SELECT fl.id, fl.meal_type, fl.quantity, fl.unit, fl.date, f.name AS food_name
+      FROM food_logs fl
+      JOIN foods f ON fl.food_id = f.id
+      WHERE fl.user_id = $1
+      ORDER BY fl.date DESC, fl.meal_type
+      `,
+      [user_id]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching food logs:", err);
+    res.status(500).json({ message: 'Server error fetching food logs' });
+  }
+});
 module.exports = router;
