@@ -4,8 +4,7 @@ const pool = require('../db'); // your PostgreSQL pool
 const { authenticateToken } = require('../middleware/auth');
 
 router.post('/', authenticateToken, async (req, res) => {
-  const user_id = req.user.id; // this comes from the decoded token
-
+  const user_id = req.user.id;
   const {
     food_id,
     quantity,
@@ -15,8 +14,13 @@ router.post('/', authenticateToken, async (req, res) => {
     meal_type_id
   } = req.body;
 
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    // 1. Insert into food_logs
+    const foodLogResult = await client.query(
       `INSERT INTO food_logs 
         (user_id, food_id, quantity, unit, date, meal_type, meal_type_id, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
@@ -24,12 +28,55 @@ router.post('/', authenticateToken, async (req, res) => {
       [user_id, food_id, quantity, unit, date, meal_type, meal_type_id]
     );
 
-    res.status(201).json(result.rows[0]);
+    const log = foodLogResult.rows[0];
+
+    // 2. Get nutrients JSON and serving size from foods table
+    const foodResult = await client.query(
+      `SELECT nutrients, serving_size_g FROM foods WHERE id = $1`,
+      [food_id]
+    );
+
+    const food = foodResult.rows[0];
+    if (!food) throw new Error("Food not found");
+
+    const { nutrients, serving_size_g } = food;
+    const servingSizeG = serving_size_g || 100;
+    const multiplier = quantity / servingSizeG;
+
+    // 3. Extract macros from nutrients JSON
+    const protein = (nutrients?.["Protein"]?.value || 0) * multiplier;
+    const carbs = (nutrients?.["Carbohydrate, by difference"]?.value || 0) * multiplier;
+    const fat = (nutrients?.["Total lipid (fat)"]?.value || 0) * multiplier;
+    const calories = (carbs * 4) + (protein * 4) + (fat * 9);
+
+    // 4. Upsert into daily_summaries
+    await client.query(
+      `
+      INSERT INTO daily_summaries (user_id, date, calories, protein, carbs, fat)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (user_id, date)
+      DO UPDATE SET
+        calories = daily_summaries.calories + EXCLUDED.calories,
+        protein = daily_summaries.protein + EXCLUDED.protein,
+        carbs = daily_summaries.carbs + EXCLUDED.carbs,
+        fat = daily_summaries.fat + EXCLUDED.fat,
+        updated_at = NOW()
+      `,
+      [user_id, date, calories, protein, carbs, fat]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(201).json(log);
   } catch (err) {
-    console.error('❌ Error inserting food log:', err);
+    await client.query('ROLLBACK');
+    console.error('❌ Error logging food and updating summary:', err);
     res.status(500).json({ message: 'Server error adding food log' });
+  } finally {
+    client.release();
   }
 });
+
 router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
