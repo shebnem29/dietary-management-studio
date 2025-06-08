@@ -81,11 +81,19 @@ router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD'
+    const today = new Date().toISOString().split('T')[0];
 
     const result = await pool.query(
       `
-      SELECT fl.id, fl.meal_type, fl.quantity, fl.unit, fl.date, f.name AS food_name
+      SELECT
+        fl.id,
+        fl.meal_type,
+        fl.quantity,
+        fl.unit,
+        fl.date,
+        f.name AS food_name,
+        f.nutrients,
+        f.serving_size_g
       FROM food_logs fl
       JOIN foods f ON fl.food_id = f.id
       WHERE fl.user_id = $1 AND fl.date = $2
@@ -94,9 +102,44 @@ router.get('/', authenticateToken, async (req, res) => {
       [user_id, today]
     );
 
-    res.json(result.rows);
+    const logsWithCalories = result.rows.map((row) => {
+      let nutrients = row.nutrients;
+      if (typeof nutrients === 'string') {
+        try {
+          nutrients = JSON.parse(nutrients);
+        } catch (err) {
+          nutrients = {};
+        }
+      }
+
+      const quantity = parseFloat(row.quantity);
+      const servingSize = row.serving_size_g || 100;
+
+      const multiplier = quantity; // since quantity = # of servings
+
+      const protein = (nutrients['Protein']?.value || 0) * multiplier;
+      const carbs = (nutrients['Carbohydrate, by difference']?.value || 0) * multiplier;
+      const fat = (nutrients['Total lipid (fat)']?.value || 0) * multiplier;
+
+      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+
+      return {
+        id: row.id,
+        meal_type: row.meal_type,
+        quantity,
+        unit: row.unit,
+        date: row.date,
+        food_name: row.food_name,
+        calories,
+        protein,
+        carbs,
+        fat
+      };
+    });
+
+    res.json(logsWithCalories);
   } catch (err) {
-    console.error("❌ Error fetching food logs:", err);
+    console.error('❌ Error fetching food logs:', err);
     res.status(500).json({ message: 'Server error fetching food logs' });
   }
 });
