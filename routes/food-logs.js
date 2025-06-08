@@ -144,5 +144,76 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error fetching food logs' });
   }
 });
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  const logId = req.params.id;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Get the food log to be deleted
+    const logRes = await client.query(
+      `
+      SELECT fl.*, f.nutrients, f.serving_size_g
+      FROM food_logs fl
+      JOIN foods f ON fl.food_id = f.id
+      WHERE fl.id = $1 AND fl.user_id = $2
+      `,
+      [logId, user_id]
+    );
+
+    const log = logRes.rows[0];
+    if (!log) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Food log not found' });
+    }
+
+    // 2. Calculate nutrition
+    let nutrients = log.nutrients;
+    if (typeof nutrients === 'string') {
+      nutrients = JSON.parse(nutrients);
+    }
+
+    const quantity = parseFloat(log.quantity);
+    const unitGrams = parseFloat(log.unit);
+    const baseServing = log.serving_size_g || 100;
+    const totalGrams = quantity * unitGrams;
+    const multiplier = totalGrams / baseServing;
+
+    const protein = (nutrients['Protein']?.value || 0) * multiplier;
+    const fat = (nutrients['Total lipid (fat)']?.value || 0) * multiplier;
+    const carbs = (nutrients['Carbohydrate, by difference']?.value || 0) * multiplier;
+    const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+
+    // 3. Subtract from daily_summaries
+    await client.query(
+      `
+      UPDATE daily_summaries
+      SET
+        calories = GREATEST(calories - $1, 0),
+        protein = GREATEST(protein - $2, 0),
+        carbs = GREATEST(carbs - $3, 0),
+        fat = GREATEST(fat - $4, 0),
+        updated_at = NOW()
+      WHERE user_id = $5 AND date = $6
+      `,
+      [calories, protein, carbs, fat, user_id, log.date]
+    );
+
+    // 4. Delete the log
+    await client.query('DELETE FROM food_logs WHERE id = $1 AND user_id = $2', [logId, user_id]);
+
+    await client.query('COMMIT');
+    res.status(200).json({ message: 'Food log deleted successfully' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ Error deleting food log:', err);
+    res.status(500).json({ message: 'Server error deleting food log' });
+  } finally {
+    client.release();
+  }
+});
 
 module.exports = router;
