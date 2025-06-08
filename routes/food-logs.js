@@ -41,7 +41,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const { nutrients, serving_size_g } = food;
     const servingSizeG = serving_size_g || 100;
-    const multiplier = quantity * servingSizeG;
+    const multiplier = (quantity * servingSizeG) / servingSizeG;
 
     // 3. Extract macros from nutrients JSON
     const protein = (nutrients?.["Protein"]?.value || 0) * multiplier;
