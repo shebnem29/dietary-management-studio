@@ -40,8 +40,10 @@ router.post('/', authenticateToken, async (req, res) => {
     if (!food) throw new Error("Food not found");
 
     const { nutrients, serving_size_g } = food;
-    const servingSizeG = serving_size_g || 100;
-    const multiplier = (quantity * servingSizeG) / servingSizeG;
+    const unitValue = parseFloat(unit); // ✅ Convert "100 g" or "1 g" to a number
+const servingSizeG = serving_size_g || 100;
+const totalGrams = quantity * unitValue; // ✅ calculate total grams
+const multiplier = totalGrams / servingSizeG; // ✅ accurate for all units
 
     // 3. Extract macros from nutrients JSON
     const protein = (nutrients?.["Protein"]?.value || 0) * multiplier;
