@@ -113,14 +113,15 @@ router.get('/', authenticateToken, async (req, res) => {
       }
 
       const quantity = parseFloat(row.quantity);
-      const servingSize = row.serving_size_g || 100;
+      const unitGrams = parseFloat(row.unit); // '1 g' → 1, '100 g' → 100
+      const baseServing = row.serving_size_g || 100;
 
-      const multiplier = quantity; // since quantity = # of servings
+      const totalGrams = quantity * unitGrams;
+      const multiplier = totalGrams / baseServing;
 
       const protein = (nutrients['Protein']?.value || 0) * multiplier;
-      const carbs = (nutrients['Carbohydrate, by difference']?.value || 0) * multiplier;
       const fat = (nutrients['Total lipid (fat)']?.value || 0) * multiplier;
-
+      const carbs = (nutrients['Carbohydrate, by difference']?.value || 0) * multiplier;
       const calories = (protein * 4) + (carbs * 4) + (fat * 9);
 
       return {
