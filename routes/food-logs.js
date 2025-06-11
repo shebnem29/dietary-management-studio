@@ -83,7 +83,7 @@ router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const today = new Date().toISOString().split('T')[0];
+const requestedDate = req.query.date || new Date().toISOString().split('T')[0];
 
     const result = await pool.query(
       `
@@ -101,7 +101,7 @@ router.get('/', authenticateToken, async (req, res) => {
       WHERE fl.user_id = $1 AND fl.date = $2
       ORDER BY fl.meal_type, fl.created_at
       `,
-      [user_id, today]
+      [user_id, requestedDate]
     );
 
     const logsWithCalories = result.rows.map((row) => {
