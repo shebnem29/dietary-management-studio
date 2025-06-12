@@ -83,8 +83,11 @@ router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
-const requestedDate = req.query.date || new Date().toISOString().split('T')[0];
-
+let requestedDate = req.query.date;
+if (!requestedDate) {
+  requestedDate = new Date().toISOString().split('T')[0];
+}
+console.log("🔍 Requested date:", requestedDate);
     const result = await pool.query(
       `
       SELECT
@@ -215,6 +218,63 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error deleting food log' });
   } finally {
     client.release();
+  }
+});
+
+router.get('/nutrients-summary', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+  const requestedDate = req.query.date || new Date().toISOString().split('T')[0];
+
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        fl.quantity,
+        fl.unit,
+        f.nutrients,
+        f.serving_size_g
+      FROM food_logs fl
+      JOIN foods f ON fl.food_id = f.id
+      WHERE fl.user_id = $1 AND fl.date = $2
+      `,
+      [user_id, requestedDate]
+    );
+
+    const summary = {};
+
+    result.rows.forEach(row => {
+      let nutrients = row.nutrients;
+      if (typeof nutrients === 'string') {
+        try {
+          nutrients = JSON.parse(nutrients);
+        } catch {
+          nutrients = {};
+        }
+      }
+
+      const quantity = parseFloat(row.quantity);
+      const unitGrams = parseFloat(row.unit); // e.g., 100 from '100 g'
+      const baseServing = row.serving_size_g || 100;
+      const totalGrams = quantity * unitGrams;
+      const multiplier = totalGrams / baseServing;
+
+      for (const [nutrient, { value, unit }] of Object.entries(nutrients || {})) {
+        if (!summary[nutrient]) {
+          summary[nutrient] = { value: 0, unit };
+        }
+        summary[nutrient].value += (value || 0) * multiplier;
+      }
+    });
+
+    // Round all values for cleaner display
+    for (const nutrient in summary) {
+      summary[nutrient].value = parseFloat(summary[nutrient].value.toFixed(3));
+    }
+
+    res.json(summary);
+  } catch (err) {
+    console.error('❌ Error building nutrient summary:', err);
+    res.status(500).json({ message: 'Server error generating nutrient summary' });
   }
 });
 
