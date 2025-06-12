@@ -26,9 +26,9 @@ router.patch("/", authenticateToken, async (req, res) => {
     }
 
     // 3. Replace user cuisines
-    await client.query("DELETE FROM user_cuisines WHERE user_id = $1", [userId]);
+    await client.query("DELETE FROM user_favorite_cuisines WHERE user_id = $1", [userId]);
     for (const cuisineId of cuisine_ids || []) {
-      await client.query("INSERT INTO user_cuisines (user_id, cuisine_id) VALUES ($1, $2)", [userId, cuisineId]);
+      await client.query("INSERT INTO user_favorite_cuisines (user_id, cuisine_id) VALUES ($1, $2)", [userId, cuisineId]);
     }
 
     await client.query("COMMIT");

@@ -100,7 +100,7 @@ if (!user) {
 const [prefResult, allergyResult, cuisineResult] = await Promise.all([
   db.query("SELECT 1 FROM user_preferences WHERE user_id = $1", [user.id]),
   db.query("SELECT 1 FROM user_allergies WHERE user_id = $1 LIMIT 1", [user.id]),
-  db.query("SELECT 1 FROM user_cuisines WHERE user_id = $1 LIMIT 1", [user.id]),
+  db.query("SELECT 1 FROM user_favorite_cuisines WHERE user_id = $1 LIMIT 1", [user.id]),
 ]);
 
     if (!user.verified) {
