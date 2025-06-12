@@ -14,6 +14,7 @@ const nutrientLabelRoutes = require('./routes/nutrientLabels');
 const mealTypesRoute = require('./routes/mealTypes');
 const foodRoutes = require('./routes/foods');
 const foodLogRoutes = require('./routes/food-logs');
+const userPreferencesRoutes = require("./routes/userPreferences");
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -37,6 +38,7 @@ app.use('/api/nutrient-labels', nutrientLabelRoutes);
 app.use('/api/meal-types', mealTypesRoute);
 app.use('/api/foods', foodRoutes);
 app.use('/api/food-logs', foodLogRoutes);
+app.use("/api/user/preferences", userPreferencesRoutes);
 
 
 // ✅ Fetch and log categories on server startup
