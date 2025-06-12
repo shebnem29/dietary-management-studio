@@ -32,4 +32,35 @@ router.get("/macro-options", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/diet-types", async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT id, name FROM categories ORDER BY id"
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching diet types:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+router.get("/allergens", async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT id, name FROM allergens ORDER BY id"
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching allergens:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+router.get("/cuisines", async (req, res) => {
+  try {
+    const result = await db.query("SELECT id, name FROM cuisines ORDER BY name ASC");
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching cuisines:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 module.exports = router;
