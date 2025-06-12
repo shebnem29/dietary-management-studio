@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const authenticate = require("../middleware/authenticate");
+const authenticate = require("../middleware/auth");
 
 // PATCH /api/user/preferences
 router.patch("/", authenticate, async (req, res) => {

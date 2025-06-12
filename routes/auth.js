@@ -89,11 +89,19 @@ router.post('/login', async (req, res) => {
   WHERE u.email = $1
 `, [email]);
 
-    const user = result.rows[0];
 
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+const user = result.rows[0];
+
+if (!user) {
+  return res.status(401).json({ message: 'Invalid credentials' });
+}
+
+// Now it's safe to use user.id
+const [prefResult, allergyResult, cuisineResult] = await Promise.all([
+  db.query("SELECT 1 FROM user_preferences WHERE user_id = $1", [user.id]),
+  db.query("SELECT 1 FROM user_allergies WHERE user_id = $1 LIMIT 1", [user.id]),
+  db.query("SELECT 1 FROM user_cuisines WHERE user_id = $1 LIMIT 1", [user.id]),
+]);
 
     if (!user.verified) {
       return res.status(403).json({ message: 'Please verify your email before logging in.' });
@@ -120,6 +128,9 @@ router.post('/login', async (req, res) => {
     user.protein_ratio !== null &&
     user.fat_ratio !== null &&
     user.carb_ratio !== null,
+     hasPreferences: prefResult.rowCount > 0,
+  hasAllergies: allergyResult.rowCount > 0,
+  hasCuisines: cuisineResult.rowCount > 0,
     });
   } catch (err) {
     console.error(err);
