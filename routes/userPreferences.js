@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const authenticate = require("../middleware/auth");
+const { authenticateToken } = require('../middleware/auth');
 
 // PATCH /api/user/preferences
-router.patch("/", authenticate, async (req, res) => {
+router.patch("/", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { diet_category_id, allergen_ids, cuisine_ids } = req.body;
 
