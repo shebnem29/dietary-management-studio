@@ -41,5 +41,24 @@ router.patch("/", authenticateToken, async (req, res) => {
     client.release();
   }
 });
+router.get("/", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
+  try {
+    const [dietRes, allergyRes, cuisineRes] = await Promise.all([
+      db.query(`SELECT diet_category_id FROM user_preferences WHERE user_id = $1`, [userId]),
+      db.query(`SELECT allergen_id FROM user_allergies WHERE user_id = $1`, [userId]),
+      db.query(`SELECT cuisine_id FROM user_favorite_cuisines WHERE user_id = $1`, [userId]),
+    ]);
+
+    res.status(200).json({
+      diet_category_id: dietRes.rows[0]?.diet_category_id || null,
+      allergen_ids: allergyRes.rows.map((r) => r.allergen_id),
+      cuisine_ids: cuisineRes.rows.map((r) => r.cuisine_id),
+    });
+  } catch (err) {
+    console.error("Error fetching preferences:", err);
+    res.status(500).json({ message: "Failed to fetch preferences." });
+  }
+});
 module.exports = router;
