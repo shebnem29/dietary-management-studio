@@ -277,5 +277,68 @@ router.get('/nutrients-summary', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error generating nutrient summary' });
   }
 });
+router.get('/history', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
 
+  try {
+    const result = await pool.query(
+      `
+      SELECT
+        fl.id,
+        fl.meal_type,
+        fl.quantity,
+        fl.unit,
+        fl.date,
+        f.name AS food_name,
+        f.nutrients,
+        f.serving_size_g
+      FROM food_logs fl
+      JOIN foods f ON fl.food_id = f.id
+      WHERE fl.user_id = $1
+      ORDER BY fl.date DESC, fl.created_at DESC
+      `,
+      [user_id]
+    );
+
+    const logsWithCalories = result.rows.map((row) => {
+      let nutrients = row.nutrients;
+      if (typeof nutrients === 'string') {
+        try {
+          nutrients = JSON.parse(nutrients);
+        } catch (err) {
+          nutrients = {};
+        }
+      }
+
+      const quantity = parseFloat(row.quantity);
+      const unitGrams = parseFloat(row.unit);
+      const baseServing = row.serving_size_g || 100;
+      const totalGrams = quantity * unitGrams;
+      const multiplier = totalGrams / baseServing;
+
+      const protein = (nutrients['Protein']?.value || 0) * multiplier;
+      const fat = (nutrients['Total lipid (fat)']?.value || 0) * multiplier;
+      const carbs = (nutrients['Carbohydrate, by difference']?.value || 0) * multiplier;
+      const calories = (protein * 4) + (carbs * 4) + (fat * 9);
+
+      return {
+        id: row.id,
+        meal_type: row.meal_type,
+        quantity,
+        unit: row.unit,
+        date: row.date,
+        food_name: row.food_name,
+        calories,
+        protein,
+        carbs,
+        fat
+      };
+    });
+
+    res.json(logsWithCalories);
+  } catch (err) {
+    console.error('❌ Error fetching food history:', err);
+    res.status(500).json({ message: 'Server error fetching food log history' });
+  }
+});
 module.exports = router;
