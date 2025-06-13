@@ -10,20 +10,36 @@ router.get('/', async (req, res) => {
     try {
         let result;
 
+        // Build base query with joins to get cuisines and allergens
+        let query = `
+            SELECT 
+                r.*, 
+                COALESCE(json_agg(DISTINCT rc.cuisine_id) FILTER (WHERE rc.cuisine_id IS NOT NULL), '[]') AS cuisine_ids,
+                COALESCE(json_agg(DISTINCT ia.allergen_id) FILTER (WHERE ia.allergen_id IS NOT NULL), '[]') AS allergen_ids
+            FROM recipes r
+            LEFT JOIN recipe_cuisines rc ON r.id = rc.recipe_id
+            LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+            LEFT JOIN ingredient_allergens ia ON ri.ingredient_id = ia.ingredient_id
+        `;
+
+        const values = [];
+
+        // If category is passed, add filtering JOINs
         if (category) {
-            result = await db.query(
-                `
-       SELECT recipes.*
-FROM recipes
-JOIN recipe_categories ON recipes.id = recipe_categories.recipe_id
-JOIN categories ON recipe_categories.category_id = categories.id
-WHERE categories.name = $1
-        `,
-                [category]
-            );
-        } else {
-            result = await db.query('SELECT * FROM recipes ORDER BY id DESC');
+            query += `
+                JOIN recipe_categories rcat ON r.id = rcat.recipe_id
+                JOIN categories c ON rcat.category_id = c.id
+                WHERE c.name = $1
+            `;
+            values.push(category);
         }
+
+        query += `
+            GROUP BY r.id
+            ORDER BY r.id DESC
+        `;
+
+        result = await db.query(query, values);
 
         res.json(result.rows);
     } catch (err) {
