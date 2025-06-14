@@ -43,9 +43,17 @@ router.post('/login', async (req, res) => {
   }
 });
 // GET all admins
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can view all admins' });
+  }
+
   try {
-    const result = await pool.query('SELECT id, username, role, created_at FROM admins ORDER BY created_at DESC');
+    const result = await pool.query(
+      'SELECT id, username, role, created_at FROM admins ORDER BY created_at DESC'
+    );
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching admins:', err);
@@ -86,6 +94,36 @@ router.post('/create', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error creating admin:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+router.put('/:id/role', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+  const allowedRoles = ['content', 'nutritionist'];
+  const requesterRole = req.user?.role;
+
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Unauthorized: Only super admins can edit roles' });
+  }
+
+  if (!allowedRoles.includes(role)) {
+    return res.status(400).json({ message: 'Invalid role provided' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE admins SET role = $1 WHERE id = $2 RETURNING id, username, role',
+      [role, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    res.json({ message: 'Role updated successfully', admin: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating role:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 module.exports = router;
