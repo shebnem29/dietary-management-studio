@@ -41,5 +41,14 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
-
+// GET all admins
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, username, role, created_at FROM admins ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching admins:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
