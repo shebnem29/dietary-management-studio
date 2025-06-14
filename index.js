@@ -15,6 +15,8 @@ const mealTypesRoute = require('./routes/mealTypes');
 const foodRoutes = require('./routes/foods');
 const foodLogRoutes = require('./routes/food-logs');
 const userPreferencesRoutes = require("./routes/userPreferences");
+const adminRoutes = require('./routes/admin');
+
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -39,17 +41,8 @@ app.use('/api/meal-types', mealTypesRoute);
 app.use('/api/foods', foodRoutes);
 app.use('/api/food-logs', foodLogRoutes);
 app.use("/api/user/preferences", userPreferencesRoutes);
+app.use('/api/admin', adminRoutes);
 
-
-// ✅ Fetch and log categories on server startup
-pool.query('SELECT * FROM categories')
-  .then(result => {
-    console.log('Categories table rows:');
-    console.log(result.rows);
-  })
-  .catch(err => {
-    console.error('Error fetching categories:', err);
-  });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
