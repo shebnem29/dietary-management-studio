@@ -96,33 +96,24 @@ router.post('/create', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-router.put('/:id/role', authenticateToken, async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { role } = req.body;
-  const allowedRoles = ['content', 'nutritionist'];
   const requesterRole = req.user?.role;
 
   if (requesterRole !== 'super') {
-    return res.status(403).json({ message: 'Unauthorized: Only super admins can edit roles' });
-  }
-
-  if (!allowedRoles.includes(role)) {
-    return res.status(400).json({ message: 'Invalid role provided' });
+    return res.status(403).json({ message: 'Only super admins can delete admins' });
   }
 
   try {
-    const result = await pool.query(
-      'UPDATE admins SET role = $1 WHERE id = $2 RETURNING id, username, role',
-      [role, id]
-    );
+    const result = await pool.query('DELETE FROM admins WHERE id = $1 RETURNING *', [id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Admin not found' });
     }
 
-    res.json({ message: 'Role updated successfully', admin: result.rows[0] });
+    res.json({ message: 'Admin deleted successfully' });
   } catch (err) {
-    console.error('Error updating role:', err);
+    console.error('Error deleting admin:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
