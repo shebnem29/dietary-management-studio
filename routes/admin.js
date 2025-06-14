@@ -117,4 +117,33 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+router.put('/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { username, role } = req.body;
+  const requesterRole = req.user?.role;
+
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can update admins' });
+  }
+
+  if (!username || !role) {
+    return res.status(400).json({ message: 'Username and role are required' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE admins SET username = $1, role = $2 WHERE id = $3 RETURNING id',
+      [username, role, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+
+    res.json({ message: 'Admin updated successfully' });
+  } catch (err) {
+    console.error('Error updating admin:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
