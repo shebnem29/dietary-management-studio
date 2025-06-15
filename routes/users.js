@@ -300,28 +300,28 @@ router.get('/filter', authenticateToken, async (req, res) => {
 router.get('/users-with-goals', async (req, res) => {
   try {
     const result = await db.query(`
-     SELECT 
-  u.id AS user_id,
-  u.name,
-  u.email,
-  g.id AS goal_id,
-  g.goal_weight,
-  g.created_at,
-  g.weekly_rate_kg,
-  g.active,
-  gt.name AS goal_type_name
-FROM users u
-LEFT JOIN LATERAL (
-  SELECT 
-    ug.*,
-    gt.name
-  FROM user_goals ug
-  LEFT JOIN goal_types gt ON ug.goal_type_id = gt.id
-  WHERE ug.user_id = u.id
-  ORDER BY ug.active DESC, ug.created_at DESC
-  LIMIT 1
-) g ON true
-ORDER BY u.id;
+      SELECT 
+        u.id AS user_id,
+        u.name,
+        u.email,
+        g.id AS goal_id,
+        g.goal_weight,
+        g.created_at,
+        g.weekly_rate_kg,
+        g.active,
+        g.name AS goal_type_name
+      FROM users u
+      LEFT JOIN LATERAL (
+        SELECT 
+          ug.*,
+          gt.name
+        FROM user_goals ug
+        LEFT JOIN goal_types gt ON ug.goal_type_id = gt.id
+        WHERE ug.user_id = u.id
+        ORDER BY ug.active DESC, ug.created_at DESC
+        LIMIT 1
+      ) g ON true
+      ORDER BY u.id;
     `);
 
     const usersWithGoals = result.rows.map(row => ({
@@ -330,13 +330,12 @@ ORDER BY u.id;
       email: row.email,
       goal: row.goal_id
         ? {
-          goal_weight: row.goal_weight,
-          current_weight: row.current_weight,
-          created_at: row.created_at,
-          weekly_rate_kg: row.weekly_rate_kg,
-          goal_type_id: row.goal_type_id,
-          active: row.active,
-        }
+            goal_weight: row.goal_weight,
+            created_at: row.created_at,
+            weekly_rate_kg: row.weekly_rate_kg,
+            goal_type_name: row.goal_type_name,
+            active: row.active,
+          }
         : null,
     }));
 
