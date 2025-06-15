@@ -297,5 +297,50 @@ router.get('/filter', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/users-with-goals', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        u.id AS user_id,
+        u.name,
+        u.email,
+        g.id AS goal_id,
+        g.goal_weight,
+        g.current_weight,
+        g.created_at,
+        g.weekly_rate_kg,
+        g.goal_type_id,
+        g.active
+      FROM users u
+      LEFT JOIN LATERAL (
+        SELECT * FROM user_goals
+        WHERE user_goals.user_id = u.id
+        ORDER BY active DESC, created_at DESC
+        LIMIT 1
+      ) g ON true
+      ORDER BY u.id
+    `);
 
+    const usersWithGoals = result.rows.map(row => ({
+      id: row.user_id,
+      name: row.name,
+      email: row.email,
+      goal: row.goal_id
+        ? {
+            goal_weight: row.goal_weight,
+            current_weight: row.current_weight,
+            created_at: row.created_at,
+            weekly_rate_kg: row.weekly_rate_kg,
+            goal_type_id: row.goal_type_id,
+            active: row.active,
+          }
+        : null,
+    }));
+
+    res.json(usersWithGoals);
+  } catch (err) {
+    console.error('Error fetching users with goals:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
