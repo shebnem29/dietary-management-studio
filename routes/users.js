@@ -345,4 +345,31 @@ router.get('/users-with-goals', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+router.get('/:id/goals-history', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const result = await db.query(
+      `
+      SELECT 
+        ug.id AS goal_id,
+        ug.goal_weight,
+        ug.created_at,
+        ug.weekly_rate_kg,
+        ug.active,
+        gt.name AS goal_type_name
+      FROM user_goals ug
+      LEFT JOIN goal_types gt ON ug.goal_type_id = gt.id
+      WHERE ug.user_id = $1
+      ORDER BY ug.created_at DESC;
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching goal history for user', userId, err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
