@@ -264,5 +264,38 @@ router.get('/search', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/filter', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can filter users' });
+  }
+
+  const {
+    verified, sex, activity_level_id, physiological_state,
+    minWeight, maxWeight, minHeight, maxHeight
+  } = req.query;
+
+  try {
+    const result = await db.query('SELECT * FROM users');
+    let users = result.rows;
+
+    if (verified === 'true') users = users.filter(u => u.verified === true);
+    if (verified === 'false') users = users.filter(u => u.verified === false);
+
+    if (sex) users = users.filter(u => u.sex === sex);
+    if (activity_level_id) users = users.filter(u => u.activity_level_id == activity_level_id);
+    if (physiological_state) users = users.filter(u => u.physiological_state === physiological_state);
+
+    if (minWeight) users = users.filter(u => u.weight >= parseFloat(minWeight));
+    if (maxWeight) users = users.filter(u => u.weight <= parseFloat(maxWeight));
+    if (minHeight) users = users.filter(u => u.height >= parseFloat(minHeight));
+    if (maxHeight) users = users.filter(u => u.height <= parseFloat(maxHeight));
+
+    res.json(users);
+  } catch (err) {
+    console.error('Filter users error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 module.exports = router;
