@@ -372,4 +372,31 @@ router.get('/:id/goals-history', authenticateToken,  async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+router.get('/:id/stats', authenticateToken, async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+    const result = await db.query(
+      `
+      SELECT 
+        us.id,
+        us.user_id,
+        us.bmi,
+        us.weight,
+        us.created_at,
+        u.name AS user_name
+      FROM user_stats us
+      INNER JOIN users u ON us.user_id = u.id
+      WHERE us.user_id = $1
+      ORDER BY us.created_at ASC;
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching user stats for user', userId, err);
+    res.status(500).json({ message: 'Failed to fetch user stats' });
+  }
+});
 module.exports = router;
