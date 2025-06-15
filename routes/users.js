@@ -120,7 +120,7 @@ router.get("/", authenticateToken, async (req, res) => {
 
   try {
     const result = await db.query(
-      "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC"
+      "SELECT id, name, email, verified, FROM users ORDER BY created_at DESC"
     );
     res.json(result.rows);
   } catch (err) {
