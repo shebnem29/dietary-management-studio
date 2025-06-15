@@ -112,4 +112,70 @@ router.get("/me", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/", authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: "Only super admins can view all users" });
+  }
+
+  try {
+    const result = await db.query(
+      "SELECT id, name, email, created_at FROM users ORDER BY created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch all users error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+router.put("/:id", authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: "Only super admins can update users" });
+  }
+
+  const { id } = req.params;
+  const { name, email } = req.body;
+
+  if (!name || !email) {
+    return res.status(400).json({ message: "Name and email are required" });
+  }
+
+  try {
+    const result = await db.query(
+      "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id",
+      [name, email, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "User updated successfully" });
+  } catch (err) {
+    console.error("Update user error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+router.delete("/:id", authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: "Only super admins can delete users" });
+  }
+
+  const { id } = req.params;
+
+  try {
+    const result = await db.query("DELETE FROM users WHERE id = $1 RETURNING id", [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "User deleted successfully" });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 module.exports = router;
