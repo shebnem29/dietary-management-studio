@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
+const deletedUsersStack = [];
 function linearSearch(users, key, field) {
   return users.filter(user =>
     user[field].toLowerCase().includes(key.toLowerCase())
@@ -170,18 +171,51 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
 
   try {
-    const result = await db.query("DELETE FROM users WHERE id = $1 RETURNING id", [id]);
+    const result = await db.query("DELETE FROM users WHERE id = $1 RETURNING *", [id]);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({ message: "User deleted successfully" });
+    // Push the deleted user onto the stack
+    deletedUsersStack.push(result.rows[0]);
+
+    res.json({ message: "User deleted successfully", undoAvailable: true });
   } catch (err) {
     console.error("Delete user error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+router.post("/undo-delete", authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: "Only super admins can undo deletions" });
+  }
+
+  if (deletedUsersStack.length === 0) {
+    return res.status(400).json({ message: "Nothing to undo" });
+  }
+
+  const user = deletedUsersStack.pop(); // LIFO
+
+  try {
+    await db.query(`
+      INSERT INTO users (id, name, email, password, verified, birthday, height, weight, sex, physiological_state, activity_level_id)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    `, [
+      user.id, user.name, user.email, user.password, user.verified,
+      user.birthday, user.height, user.weight, user.sex,
+      user.physiological_state, user.activity_level_id
+    ]);
+
+    res.json({ message: "User restored successfully", user });
+  } catch (err) {
+    console.error("Undo delete error:", err);
+    res.status(500).json({ message: "Failed to restore user" });
+  }
+});
+
+
 // GET /api/users/search?name=John&email=gmail
 router.get('/search', authenticateToken, async (req, res) => {
   const requesterRole = req.user?.role;
