@@ -297,7 +297,7 @@ router.get('/filter', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-router.get('/users-with-goals', async (req, res) => {
+router.get('/users-with-goals', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT 
@@ -345,7 +345,7 @@ router.get('/users-with-goals', async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-router.get('/:id/goals-history', async (req, res) => {
+router.get('/:id/goals-history', authenticateToken,  async (req, res) => {
   const userId = req.params.id;
 
   try {
