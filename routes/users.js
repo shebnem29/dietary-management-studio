@@ -2,7 +2,11 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
-
+function linearSearch(users, key, field) {
+  return users.filter(user =>
+    user[field].toLowerCase().includes(key.toLowerCase())
+  );
+}
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authenticateToken	, async (req, res) => {
   const userId = req.user.id;
@@ -176,6 +180,45 @@ router.delete("/:id", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error("Delete user error:", err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+// GET /api/users/search?name=John&email=gmail
+router.get('/search', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can search users' });
+  }
+
+  const { name = '', email = '' } = req.query;
+
+  if (!name && !email) {
+    return res.status(400).json({ message: 'Provide name or email to search' });
+  }
+
+  try {
+    const result = await db.query(
+      'SELECT id, name, email, verified FROM users'
+    );
+    const users = result.rows;
+
+    let filtered = users;
+
+    if (name) {
+      filtered = linearSearch(filtered, name, 'name');
+    }
+
+    if (email) {
+      filtered = linearSearch(filtered, email, 'email');
+    }
+
+    if (filtered.length === 0) {
+      return res.status(404).json({ message: 'No matching users found' });
+    }
+
+    res.json(filtered);
+  } catch (err) {
+    console.error('User search error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 module.exports = router;
