@@ -4,9 +4,8 @@ const db = require("../db");
 const { authenticateToken } = require("../middleware/auth");
 const deletedUsersStack = [];
 function linearSearch(users, key, field) {
-  return users.filter(user =>
-    user[field].toLowerCase().includes(key.toLowerCase())
-  );
+ const lowerTerm = term.toLowerCase();
+  return array.filter(item => item[key]?.toLowerCase().includes(lowerTerm));
 }
 // PATCH /api/users/update-profile
 router.patch("/update-profile", authenticateToken	, async (req, res) => {
@@ -229,30 +228,35 @@ router.get('/search', authenticateToken, async (req, res) => {
     return res.status(400).json({ message: 'Provide name or email to search' });
   }
 
+  // ✅ Define linear search inline or import from utils
+  function linearSearch(array, term, key) {
+    const lowerTerm = term.toLowerCase();
+    return array.filter(item => item[key]?.toLowerCase().includes(lowerTerm));
+  }
+
   try {
     const result = await db.query(
       'SELECT id, name, email, verified FROM users'
     );
-    const users = result.rows;
-
-    let filtered = users;
+    let users = result.rows;
 
     if (name) {
-      filtered = linearSearch(filtered, name, 'name');
+      users = linearSearch(users, name, 'name');
     }
 
     if (email) {
-      filtered = linearSearch(filtered, email, 'email');
+      users = linearSearch(users, email, 'email');
     }
 
-    if (filtered.length === 0) {
+    if (users.length === 0) {
       return res.status(404).json({ message: 'No matching users found' });
     }
 
-    res.json(filtered);
+    res.json(users);
   } catch (err) {
     console.error('User search error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 module.exports = router;
