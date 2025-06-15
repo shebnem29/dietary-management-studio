@@ -228,7 +228,7 @@ router.get('/search', authenticateToken, async (req, res) => {
     return res.status(400).json({ message: 'Provide name or email to search' });
   }
 
-  // ✅ Define linear search inline or import from utils
+  // Case-insensitive linear search with partial match
   function linearSearch(array, term, key) {
     const lowerTerm = term.toLowerCase();
     return array.filter(item => item[key]?.toLowerCase().includes(lowerTerm));
@@ -238,25 +238,31 @@ router.get('/search', authenticateToken, async (req, res) => {
     const result = await db.query(
       'SELECT id, name, email, verified FROM users'
     );
-    let users = result.rows;
+    const users = result.rows;
+
+    let matches = [];
 
     if (name) {
-      users = linearSearch(users, name, 'name');
+      matches = [...matches, ...linearSearch(users, name, 'name')];
     }
 
     if (email) {
-      users = linearSearch(users, email, 'email');
+      matches = [...matches, ...linearSearch(users, email, 'email')];
     }
 
-    if (users.length === 0) {
+    // Remove duplicates by user id
+    const uniqueMatches = Array.from(new Map(matches.map(u => [u.id, u])).values());
+
+    if (uniqueMatches.length === 0) {
       return res.status(404).json({ message: 'No matching users found' });
     }
 
-    res.json(users);
+    res.json(uniqueMatches);
   } catch (err) {
     console.error('User search error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 module.exports = router;
