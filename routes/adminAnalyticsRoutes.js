@@ -46,7 +46,7 @@ router.post('/track-feature', authenticateToken, async (req, res) => {
   }
 });
 
-router.get('/feature-usage-breakdown', authenticateAdmin, async (req, res) => {
+router.get('/feature-usage-breakdown', authenticateToken, async (req, res) => {
   try {
     const { rows } = await db.query(`
       SELECT
