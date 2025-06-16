@@ -427,5 +427,24 @@ router.get('/stats/user-growth', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/stats/sex-distribution', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can view sex distribution' });
+  }
 
+  try {
+    const result = await db.query(`
+      SELECT sex, COUNT(*) AS count
+      FROM users
+      WHERE sex IS NOT NULL
+      GROUP BY sex;
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching sex distribution:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
