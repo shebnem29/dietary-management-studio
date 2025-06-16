@@ -76,6 +76,33 @@ router.get('/feature-usage-breakdown', authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch breakdown" });
   }
 });
+router.get('/feature-usage-details/:feature', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can access usage details' });
+  }
+
+  const { feature } = req.params;
+
+  try {
+    const { rows } = await db.query(`
+      SELECT 
+        u.name, 
+        u.email,
+        MAX(ful.timestamp) AS last_used
+      FROM feature_usage_logs ful
+      JOIN users u ON ful.user_id = u.id
+      WHERE ful.feature = $1
+      GROUP BY u.id
+      ORDER BY last_used DESC
+    `, [feature]);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching usage details:", err);
+    res.status(500).json({ message: "Failed to fetch usage details" });
+  }
+});
 
 
 module.exports = router;
