@@ -28,6 +28,7 @@ router.get('/food-log-frequency', authenticateToken, async (req, res) => {
 });
 // POST /api/track-feature
 router.post('/track-feature', authenticateToken, async (req, res) => {
+    
   const { feature } = req.body;
   const userId = req.user.id;
 
@@ -47,6 +48,10 @@ router.post('/track-feature', authenticateToken, async (req, res) => {
 });
 
 router.get('/feature-usage-breakdown', authenticateToken, async (req, res) => {
+     const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can access food log frequency' });
+  }
   try {
     const { rows } = await db.query(`
       SELECT
