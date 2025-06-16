@@ -46,4 +46,31 @@ router.post('/track-feature', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/feature-usage-breakdown', authenticateAdmin, async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT
+        feature,
+        COUNT(DISTINCT user_id) AS user_count
+      FROM feature_usage_logs
+      GROUP BY feature
+    `);
+
+    // Get total user count
+    const totalUsersResult = await db.query(`SELECT COUNT(*) FROM users`);
+    const totalUsers = parseInt(totalUsersResult.rows[0].count);
+
+    const result = rows.map(row => ({
+      feature: row.feature,
+      percentage: ((row.user_count / totalUsers) * 100).toFixed(1), // e.g., 75.0%
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error("Error fetching usage breakdown:", err);
+    res.status(500).json({ message: "Failed to fetch breakdown" });
+  }
+});
+
+
 module.exports = router;
