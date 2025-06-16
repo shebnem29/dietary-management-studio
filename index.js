@@ -44,6 +44,6 @@ app.use('/api/food-logs', foodLogRoutes);
 app.use("/api/user/preferences", userPreferencesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/adminDashboard', adminDashboardRoutes)
-app.use('adminAnalytics', adminAnalyticsRoutes)
+app.use('/adminAnalytics', adminAnalyticsRoutes)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
