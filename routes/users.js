@@ -214,7 +214,6 @@ router.post("/undo-delete", authenticateToken, async (req, res) => {
   }
 });
 
-
 // GET /api/users/search?name=John&email=gmail
 router.get('/search', authenticateToken, async (req, res) => {
   const requesterRole = req.user?.role;
@@ -399,4 +398,34 @@ router.get('/:id/stats', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch user stats' });
   }
 });
+router.get('/stats/user-growth', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can view user growth data' });
+  }
+
+  const groupBy = req.query.groupBy || 'week'; // default to week
+  const validGroups = ['week', 'month', 'year'];
+
+  if (!validGroups.includes(groupBy)) {
+    return res.status(400).json({ message: 'Invalid groupBy value' });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT 
+        DATE_TRUNC('${groupBy}', created_at) AS period,
+        COUNT(*) AS user_count
+      FROM users
+      GROUP BY period
+      ORDER BY period ASC;
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching user growth:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
