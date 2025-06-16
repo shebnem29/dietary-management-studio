@@ -27,7 +27,7 @@ router.get('/food-log-frequency', authenticateToken, async (req, res) => {
   }
 });
 // POST /api/track-feature
-router.post('/track-feature', authenticateUser, async (req, res) => {
+router.post('/track-feature', authenticateToken, async (req, res) => {
   const { feature } = req.body;
   const userId = req.user.id;
 
