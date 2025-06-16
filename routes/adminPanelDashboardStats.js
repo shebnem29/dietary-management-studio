@@ -95,4 +95,22 @@ router.post('/ping', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.get('/stats/active-count', authenticateToken, async (req, res) => {
+  const role = req.user?.role;
+  if (role !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can view active user count' });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT COUNT(*) FROM users
+      WHERE last_active_at > NOW() - INTERVAL '5 minutes'
+    `);
+
+    res.json({ activeCount: parseInt(result.rows[0].count, 10) });
+  } catch (err) {
+    console.error('Error fetching active user count:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
