@@ -329,12 +329,12 @@ router.get('/users-with-goals', authenticateToken, async (req, res) => {
       email: row.email,
       goal: row.goal_id
         ? {
-            goal_weight: row.goal_weight,
-            created_at: row.created_at,
-            weekly_rate_kg: row.weekly_rate_kg,
-            goal_type_name: row.goal_type_name,
-            active: row.active,
-          }
+          goal_weight: row.goal_weight,
+          created_at: row.created_at,
+          weekly_rate_kg: row.weekly_rate_kg,
+          goal_type_name: row.goal_type_name,
+          active: row.active,
+        }
         : null,
     }));
 
@@ -344,7 +344,7 @@ router.get('/users-with-goals', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
-router.get('/:id/goals-history', authenticateToken,  async (req, res) => {
+router.get('/:id/goals-history', authenticateToken, async (req, res) => {
   const userId = req.params.id;
 
   try {
@@ -444,6 +444,36 @@ router.get('/stats/sex-distribution', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching sex distribution:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+router.get('/stats/average-bmi', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'super') {
+    return res.status(403).json({ message: 'Only super admins can view average BMI' });
+  }
+
+  const groupBy = req.query.groupBy || 'week'; // 'week', 'month', or 'year'
+  const validGroups = ['week', 'month', 'year'];
+
+  if (!validGroups.includes(groupBy)) {
+    return res.status(400).json({ message: 'Invalid groupBy value' });
+  }
+
+  try {
+    const result = await db.query(`
+      SELECT 
+        DATE_TRUNC($1, created_at) AS period,
+        ROUND(AVG(bmi)::numeric, 2) AS average_bmi
+      FROM user_stats
+      WHERE bmi IS NOT NULL
+      GROUP BY period
+      ORDER BY period;
+    `, [groupBy]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching average BMI:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
