@@ -26,4 +26,24 @@ router.get('/food-log-frequency', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+// POST /api/track-feature
+router.post('/track-feature', authenticateUser, async (req, res) => {
+  const { feature } = req.body;
+  const userId = req.user.id;
+
+  if (!feature) return res.status(400).json({ message: 'Feature is required' });
+
+  try {
+    await db.query(`
+      INSERT INTO feature_usage_logs (user_id, feature)
+      VALUES ($1, $2)
+    `, [userId, feature]);
+
+    res.status(200).json({ message: 'Feature tracked' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to track feature' });
+  }
+});
+
 module.exports = router;
