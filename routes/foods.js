@@ -39,6 +39,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 router.get('/list-all-foods', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can update categories' });
+  }
+
   try {
     const result = await pool.query('SELECT * FROM foods ORDER BY id DESC');
     res.json(result.rows);
