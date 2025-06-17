@@ -92,6 +92,7 @@ router.post('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 router.post('/bulk', authenticateToken, async (req, res) => {
   const { names } = req.body;
 
@@ -113,7 +114,7 @@ router.post('/bulk', authenticateToken, async (req, res) => {
       ON CONFLICT (name) DO NOTHING
     `;
 
-    await db.query(query, flatValues);
+    await pool.query(query, flatValues);
 
     res.json({ message: `Successfully inserted ${unique.length} categories` });
   } catch (err) {
