@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db'); // Your PostgreSQL connection
 const { authenticateToken } = require('../middleware/auth');
-const fetch = require('node-fetch');
 require('dotenv').config();
 
 const USDA_API_KEY = process.env.USDA_API_KEY;
