@@ -2,7 +2,20 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db'); // Your PostgreSQL connection
 const { authenticateToken } = require('../middleware/auth');
+router.get('/list-all-foods', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can update categories' });
+  }
 
+  try {
+    const result = await pool.query('SELECT * FROM foods ORDER BY id DESC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching foods:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 router.get('/', async (req, res) => {
   const { search } = req.query;
 
@@ -38,18 +51,5 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-router.get('/list-all-foods', authenticateToken, async (req, res) => {
-  const requesterRole = req.user?.role;
-  if (requesterRole !== 'content') {
-    return res.status(403).json({ message: 'Only content managers can update categories' });
-  }
 
-  try {
-    const result = await pool.query('SELECT * FROM foods ORDER BY id DESC');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching foods:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 module.exports = router;
