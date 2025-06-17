@@ -27,7 +27,7 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
     orderClause = ' ORDER BY name ASC';
   } else if (['protein', 'carbs', 'fat'].includes(sort)) {
     const nutrientKey = getNutrientKey(sort);
-    orderClause = ` ORDER BY (nutrients->>'${nutrientKey}')::float DESC`;
+orderClause = ` ORDER BY (nutrients->'${nutrientKey}'->>'value')::float DESC`;
   } else {
     orderClause = ' ORDER BY id DESC';
   }
