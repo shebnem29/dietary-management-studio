@@ -13,27 +13,18 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
 
   let baseQuery = 'SELECT * FROM foods';
   const params = [];
-  let whereClause = '';
-  let orderClause = '';
 
-  // Optional search filter
   if (search) {
-    whereClause = ' WHERE LOWER(name) LIKE $1';
+    baseQuery += ' WHERE LOWER(name) LIKE $1';
     params.push(`%${search}%`);
   }
 
-  // Sorting by either name or nutrients
   if (sort === 'name') {
-    orderClause = ' ORDER BY name ASC';
-  } else if (['protein', 'carbs', 'fat'].includes(sort)) {
-    const nutrientKey = getNutrientKey(sort);
-orderClause = ` ORDER BY (nutrients->'${nutrientKey}'->>'value')::float DESC`;
-  } else {
-    orderClause = ' ORDER BY id DESC';
+    baseQuery += ' ORDER BY name ASC';
   }
 
   try {
-    const result = await pool.query(`${baseQuery}${whereClause}${orderClause}`, params);
+    const result = await pool.query(baseQuery, params);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching foods:', err);
@@ -41,19 +32,6 @@ orderClause = ` ORDER BY (nutrients->'${nutrientKey}'->>'value')::float DESC`;
   }
 });
 
-// Helper to map frontend sort keys to nutrient keys
-function getNutrientKey(key) {
-  switch (key) {
-    case 'protein':
-      return 'Protein';
-    case 'carbs':
-      return 'Carbohydrate, by difference';
-    case 'fat':
-      return 'Total lipid (fat)';
-    default:
-      return '';
-  }
-}
 
 // UPDATE a food by ID (content managers only)
 router.put('/:id', authenticateToken, async (req, res) => {
