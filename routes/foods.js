@@ -11,16 +11,23 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
   const sort = req.query.sort || ''; // 'name', 'protein', 'carbs', 'fat'
 
   // Base query
-  let baseQuery = 'SELECT * FROM foods';
+  const search = req.query.search?.toLowerCase() || '';
+let baseQuery = 'SELECT * FROM foods';
+let params = [];
 
-  // Add sorting condition
-  if (sort === 'name') {
-    baseQuery += ' ORDER BY name ASC';
-  } else if (['protein', 'carbs', 'fat'].includes(sort)) {
-    baseQuery += ' ORDER BY (nutrients->>\'' + getNutrientKey(sort) + '\')::float DESC';
-  } else {
-    baseQuery += ' ORDER BY id DESC';
-  }
+if (search) {
+  baseQuery += ' WHERE LOWER(name) LIKE $1';
+  params.push(`%${search}%`);
+}
+
+// Add sorting
+if (sort === 'name') {
+  baseQuery += ' ORDER BY name ASC';
+} else if (['protein', 'carbs', 'fat'].includes(sort)) {
+  baseQuery += ` ORDER BY (nutrients->>'${getNutrientKey(sort)}')::float DESC`;
+} else {
+  baseQuery += ' ORDER BY id DESC';
+}
 
   try {
     const result = await pool.query(baseQuery);
