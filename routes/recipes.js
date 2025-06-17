@@ -2,7 +2,53 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { authenticateToken } = require('../middleware/auth');
+router.get('/list-all-recipes', authenticateToken, async (req, res) => {
+   const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can search foods' });
+  }
+  try {
+    const query = `
+      SELECT 
+        r.id,
+        r.title,
+        r.image,
+        r.summary,
+        r.ready_in_minutes,
+        r.servings,
+        r.price_per_serving,
+        r.health_score,
 
+        (
+          SELECT string_agg(ri.original, ', ')
+          FROM recipe_ingredients ri
+          WHERE ri.recipe_id = r.id
+        ) AS ingredients,
+
+        (
+          SELECT string_agg(i.description, E'\n')
+          FROM instructions i
+          WHERE i.recipe_id = r.id
+        ) AS instructions,
+
+        (
+          SELECT json_object_agg(n.name, json_build_object('amount', n.amount, 'unit', n.unit))
+          FROM nutrients n
+          WHERE n.recipe_id = r.id
+        ) AS nutrients
+
+      FROM recipes r
+      ORDER BY r.id DESC
+    `;
+
+    const { rows } = await db.query(query);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching full recipe list:', err);
+    res.status(500).json({ error: 'Failed to fetch full recipe list' });
+  }
+});
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
