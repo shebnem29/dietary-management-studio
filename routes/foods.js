@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db'); // Your PostgreSQL connection
 const { authenticateToken } = require('../middleware/auth');
-const USDA_API_KEY = process.env.USDA_API_KEY;
+require('dotenv').config();
 
+const USDA_API_KEY = process.env.USDA_API_KEY;
+console.log(USDA_API_KEY)
 router.get('/list-all-foods', authenticateToken, async (req, res) => {
   const requesterRole = req.user?.role;
   if (requesterRole !== 'content') {
