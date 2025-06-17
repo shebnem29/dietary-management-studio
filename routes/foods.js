@@ -100,26 +100,23 @@ router.post('/import-usda', authenticateToken, async (req, res) => {
         continue;
       }
 
-      const nutrients = {};
-      for (const nutrient of foodData.foodNutrients || []) {
-        if (nutrient.nutrientName && nutrient.value != null) {
-          nutrients[nutrient.nutrientName] = {
-            unit: nutrient.unitName || '',
-            value: nutrient.value
-          };
-        }
-      }
+     const nutrients = {};
+for (const item of foodData.foodNutrients || []) {
+  const name = item.nutrient?.name;
+  const value = item.amount;
+  const unit = item.nutrient?.unitName;
 
-      const name = foodData.description;
-      const brand = foodData.brandOwner || '';
-      const servingSize = foodData.servingSize || 100;
-      const source = 'usda';
+  if (name && value !== null && value !== undefined) {
+    nutrients[name] = { value, unit };
+  }
+}
+    
 
-      await pool.query(
-        `INSERT INTO foods (name, brand, serving_size_g, nutrients, source, created_at, category_id)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NULL)`,
-        [name, brand, servingSize, nutrients, source]
-      );
+    await pool.query(
+  `INSERT INTO foods (name, brand, serving_size_g, nutrients, source, created_at, category_id)
+   VALUES ($1, $2, $3, $4, $5, NOW(), NULL)`,
+  [foodData.description, foodData.brandOwner || '', 100, nutrients, 'usda']
+);
 
       importedCount++;
     }
