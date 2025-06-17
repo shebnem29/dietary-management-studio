@@ -16,6 +16,58 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// UPDATE a food by ID (content managers only)
+router.put('/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { name, brand, serving_size_g } = req.body;
+  const requesterRole = req.user?.role;
+
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can update foods' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE public.foods
+       SET name = $1, brand = $2, serving_size_g = $3
+       WHERE id = $4 RETURNING *`,
+      [name, brand, serving_size_g, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Food not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating food:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// DELETE a food by ID
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+ const requesterRole = req.user?.role;
+
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can update foods' });
+  }
+  try {
+    const result = await pool.query('DELETE FROM public.foods WHERE id = $1 RETURNING *', [id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Food not found' });
+    }
+
+    res.json({ message: '🗑️ Food deleted', deleted: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting food:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 router.get('/', async (req, res) => {
   const { search } = req.query;
 
