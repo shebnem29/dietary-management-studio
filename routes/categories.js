@@ -92,4 +92,33 @@ router.post('/', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+router.post('/bulk', authenticateToken, async (req, res) => {
+  const { names } = req.body;
+
+  if (!Array.isArray(names) || names.length === 0) {
+    return res.status(400).json({ message: 'No category names provided' });
+  }
+
+  try {
+    const unique = [...new Set(names.map(name => name.trim()))].filter(Boolean);
+
+    const values = unique.map(name => [name]);
+
+    const placeholders = values.map((_, i) => `($${i + 1})`).join(',');
+    const flatValues = values.flat();
+
+    const query = `
+      INSERT INTO categories (name)
+      VALUES ${placeholders}
+      ON CONFLICT (name) DO NOTHING
+    `;
+
+    await db.query(query, flatValues);
+
+    res.json({ message: `Successfully inserted ${unique.length} categories` });
+  } catch (err) {
+    console.error('Bulk category insert error:', err);
+    res.status(500).json({ message: 'Server error inserting categories' });
+  }
+});
 module.exports = router;
