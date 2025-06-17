@@ -5,17 +5,44 @@ const { authenticateToken } = require('../middleware/auth');
 router.get('/list-all-foods', authenticateToken, async (req, res) => {
   const requesterRole = req.user?.role;
   if (requesterRole !== 'content') {
-    return res.status(403).json({ message: 'Only content managers can update categories' });
+    return res.status(403).json({ message: 'Only content managers can view foods' });
+  }
+
+  const sort = req.query.sort || ''; // 'name', 'protein', 'carbs', 'fat'
+
+  // Base query
+  let baseQuery = 'SELECT * FROM foods';
+
+  // Add sorting condition
+  if (sort === 'name') {
+    baseQuery += ' ORDER BY name ASC';
+  } else if (['protein', 'carbs', 'fat'].includes(sort)) {
+    baseQuery += ' ORDER BY (nutrients->>\'' + getNutrientKey(sort) + '\')::float DESC';
+  } else {
+    baseQuery += ' ORDER BY id DESC';
   }
 
   try {
-    const result = await pool.query('SELECT * FROM foods ORDER BY id DESC');
+    const result = await pool.query(baseQuery);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching foods:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+function getNutrientKey(sortKey) {
+  switch (sortKey) {
+    case 'protein':
+      return 'Protein';
+    case 'carbs':
+      return 'Carbohydrate, by difference';
+    case 'fat':
+      return 'Total lipid (fat)';
+    default:
+      return '';
+  }
+}
 
 // UPDATE a food by ID (content managers only)
 router.put('/:id', authenticateToken, async (req, res) => {
