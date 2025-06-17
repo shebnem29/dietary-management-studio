@@ -37,7 +37,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/list-all-foods', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM foods ORDER BY id DESC');
     res.json(result.rows);
