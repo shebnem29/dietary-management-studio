@@ -67,4 +67,29 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+// CREATE a new category (only for content managers)
+router.post('/', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can add categories' });
+  }
+
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ message: 'Category name is required' });
+  }
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO public.categories (name) VALUES ($1) RETURNING *',
+      [name]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error adding category:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 module.exports = router;
