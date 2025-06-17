@@ -8,35 +8,46 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
     return res.status(403).json({ message: 'Only content managers can view foods' });
   }
 
-  const sort = req.query.sort || ''; // 'name', 'protein', 'carbs', 'fat'
+  const sort = req.query.sort || '';
+  const search = typeof req.query.search === 'string' ? req.query.search.toLowerCase() : '';
 
-  // Base query
-  const search = req.query.search?.toLowerCase() || '';
-let baseQuery = 'SELECT * FROM foods';
-let params = [];
+  let baseQuery = 'SELECT * FROM foods';
+  const params = [];
 
-if (search) {
-  baseQuery += ' WHERE LOWER(name) LIKE $1';
-  params.push(`%${search}%`);
-}
+  if (search) {
+    baseQuery += ' WHERE LOWER(name) LIKE $1';
+    params.push(`%${search}%`);
+  }
 
-// Add sorting
-if (sort === 'name') {
-  baseQuery += ' ORDER BY name ASC';
-} else if (['protein', 'carbs', 'fat'].includes(sort)) {
-  baseQuery += ` ORDER BY (nutrients->>'${getNutrientKey(sort)}')::float DESC`;
-} else {
-  baseQuery += ' ORDER BY id DESC';
-}
+  if (sort === 'name') {
+    baseQuery += ' ORDER BY name ASC';
+  } else if (['protein', 'carbs', 'fat'].includes(sort)) {
+    baseQuery += ` ORDER BY (nutrients->>'${getNutrientKey(sort)}')::float DESC`;
+  } else {
+    baseQuery += ' ORDER BY id DESC';
+  }
 
   try {
-    const result = await pool.query(baseQuery);
+    const result = await pool.query(baseQuery, params);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching foods:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+function getNutrientKey(sortKey) {
+  switch (sortKey) {
+    case 'protein':
+      return 'Protein';
+    case 'carbs':
+      return 'Carbohydrate, by difference';
+    case 'fat':
+      return 'Total lipid (fat)';
+    default:
+      return '';
+  }
+}
 
 function getNutrientKey(sortKey) {
   switch (sortKey) {
