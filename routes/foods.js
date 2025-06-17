@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db'); // Your PostgreSQL connection
 const { authenticateToken } = require('../middleware/auth');
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const USDA_API_KEY = process.env.USDA_API_KEY;
@@ -77,6 +78,60 @@ router.get('/search', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+router.post('/import-usda', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can import foods' });
+  }
+
+  const { fdcIds } = req.body;
+  if (!Array.isArray(fdcIds) || fdcIds.length === 0) {
+    return res.status(400).json({ message: 'Missing or invalid fdcIds array' });
+  }
+
+  let importedCount = 0;
+
+  try {
+    for (const fdcId of fdcIds) {
+      const usdaRes = await fetch(`https://api.nal.usda.gov/fdc/v1/food/${fdcId}?api_key=${USDA_API_KEY}`);
+      const foodData = await usdaRes.json();
+
+      if (!usdaRes.ok || !foodData.description) {
+        console.warn(`Skipping FDC ID ${fdcId} due to invalid response`);
+        continue;
+      }
+
+      const nutrients = {};
+      for (const nutrient of foodData.foodNutrients || []) {
+        if (nutrient.nutrientName && nutrient.value != null) {
+          nutrients[nutrient.nutrientName] = {
+            unit: nutrient.unitName || '',
+            value: nutrient.value
+          };
+        }
+      }
+
+      const name = foodData.description;
+      const brand = foodData.brandOwner || '';
+      const servingSize = foodData.servingSize || 100;
+      const source = 'usda';
+
+      await pool.query(
+        `INSERT INTO foods (name, brand, serving_size_g, nutrients, source, created_at, category_id)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NULL)`,
+        [name, brand, servingSize, nutrients, source]
+      );
+
+      importedCount++;
+    }
+
+    res.json({ message: 'Import complete', importedCount });
+  } catch (err) {
+    console.error('USDA import error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // UPDATE a food by ID (content managers only)
 router.put('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
