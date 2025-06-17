@@ -34,7 +34,47 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/search', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can search foods' });
+  }
 
+  const query = req.query.q;
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ message: 'Missing or invalid search query' });
+  }
+
+  try {
+    const usdaRes = await fetch(
+      `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=10&api_key=${USDA_API_KEY}`
+    );
+    const data = await usdaRes.json();
+
+    if (!usdaRes.ok) {
+      return res.status(500).json({ message: 'USDA API error', detail: data });
+    }
+
+    // Optionally simplify the result here
+    const simplified = data.foods.map(food => ({
+      fdcId: food.fdcId,
+      description: food.description,
+      brandName: food.brandName,
+      servingSize: food.servingSize,
+      servingSizeUnit: food.servingSizeUnit,
+      nutrients: food.foodNutrients?.map(n => ({
+        name: n.nutrientName,
+        amount: n.value,
+        unit: n.unitName,
+      }))
+    }));
+
+    res.json(simplified);
+  } catch (err) {
+    console.error('USDA search error:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 // UPDATE a food by ID (content managers only)
 router.put('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -122,47 +162,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.get('/search', authenticateToken, async (req, res) => {
-  const requesterRole = req.user?.role;
-  if (requesterRole !== 'content') {
-    return res.status(403).json({ message: 'Only content managers can search foods' });
-  }
 
-  const query = req.query.q;
-  if (!query || typeof query !== 'string') {
-    return res.status(400).json({ message: 'Missing or invalid search query' });
-  }
-
-  try {
-    const usdaRes = await fetch(
-      `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=10&api_key=${USDA_API_KEY}`
-    );
-    const data = await usdaRes.json();
-
-    if (!usdaRes.ok) {
-      return res.status(500).json({ message: 'USDA API error', detail: data });
-    }
-
-    // Optionally simplify the result here
-    const simplified = data.foods.map(food => ({
-      fdcId: food.fdcId,
-      description: food.description,
-      brandName: food.brandName,
-      servingSize: food.servingSize,
-      servingSizeUnit: food.servingSizeUnit,
-      nutrients: food.foodNutrients?.map(n => ({
-        name: n.nutrientName,
-        amount: n.value,
-        unit: n.unitName,
-      }))
-    }));
-
-    res.json(simplified);
-  } catch (err) {
-    console.error('USDA search error:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
 
 module.exports = router;
 module.exports = router;
