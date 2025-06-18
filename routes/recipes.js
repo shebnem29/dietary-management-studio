@@ -128,7 +128,15 @@ router.get('/dish-types', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
+router.get('/ingredients', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM public.ingredients'); 
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching dish types:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
