@@ -178,7 +178,48 @@ router.post('/recipes',authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Failed to insert recipe', error: err.message });
   }
 });
+router.post('/ingredients', authenticateToken, async (req, res) => {
+  const { name, allergenIds } = req.body;
 
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ message: 'Ingredient name is required.' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    // Insert ingredient
+    const result = await db.query(
+      'INSERT INTO ingredients (name) VALUES ($1) RETURNING id, name',
+      [name.trim()]
+    );
+    const ingredient = result.rows[0];
+
+    // If allergens provided, insert into join table
+    if (Array.isArray(allergenIds) && allergenIds.length > 0) {
+      const insertAllergens = allergenIds.map((aid) =>
+        db.query(
+          'INSERT INTO ingredients_allergens (ingredient_id, allergen_id) VALUES ($1, $2)',
+          [ingredient.id, aid]
+        )
+      );
+      await Promise.all(insertAllergens);
+    }
+
+    await db.query('COMMIT');
+
+    res.status(201).json({ ingredient });
+  } catch (err) {
+    await db.query('ROLLBACK');
+
+    if (err.code === '23505') {
+      return res.status(409).json({ message: 'Ingredient already exists.' });
+    }
+
+    console.error('❌ Error inserting ingredient:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
