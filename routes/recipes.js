@@ -49,6 +49,74 @@ router.get('/list-all-recipes', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch full recipe list' });
   }
 });
+// UPDATE a recipe by ID (only for content managers)
+router.put('/:id', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can update recipes' });
+  }
+
+  const { id } = req.params;
+  const {
+    title,
+    image,
+    summary,
+    ready_in_minutes,
+    servings,
+    price_per_serving,
+    health_score
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `UPDATE recipes
+       SET title = $1,
+           image = $2,
+           summary = $3,
+           ready_in_minutes = $4,
+           servings = $5,
+           price_per_serving = $6,
+           health_score = $7
+       WHERE id = $8
+       RETURNING *`,
+      [title, image, summary, ready_in_minutes, servings, price_per_serving, health_score, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    res.json({ message: 'Recipe updated successfully', recipe: result.rows[0] });
+  } catch (err) {
+    console.error('Error updating recipe:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+// DELETE a recipe by ID (only for content managers)
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const requesterRole = req.user?.role;
+  if (requesterRole !== 'content') {
+    return res.status(403).json({ message: 'Only content managers can delete recipes' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    const result = await db.query(
+      'DELETE FROM recipes WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    res.json({ message: 'Recipe deleted successfully', recipe: result.rows[0] });
+  } catch (err) {
+    console.error('Error deleting recipe:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
