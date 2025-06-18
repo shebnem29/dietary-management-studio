@@ -137,6 +137,48 @@ router.get('/ingredients', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+router.post('/recipes', async (req, res) => {
+  const {
+    title,
+    image,
+    summary,
+    readyInMinutes,
+    servings,
+    pricePerServing,
+    healthScore,
+    categories,
+    dishTypes,
+    ingredients,
+    instructions,
+    nutrients,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `SELECT add_recipe($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb) AS recipe_id`,
+      [
+        title,
+        image,
+        summary,
+        readyInMinutes,
+        servings,
+        pricePerServing,
+        healthScore,
+        JSON.stringify(categories),
+        JSON.stringify(dishTypes),
+        JSON.stringify(ingredients),
+        JSON.stringify(instructions),
+        JSON.stringify(nutrients),
+      ]
+    );
+
+    res.status(201).json({ recipeId: result.rows[0].recipe_id });
+  } catch (err) {
+    console.error('❌ Error inserting recipe:', err);
+    res.status(500).json({ message: 'Failed to insert recipe', error: err.message });
+  }
+});
+
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
