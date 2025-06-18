@@ -199,7 +199,7 @@ router.post('/ingredients', authenticateToken, async (req, res) => {
     if (Array.isArray(allergenIds) && allergenIds.length > 0) {
       const insertAllergens = allergenIds.map((aid) =>
         db.query(
-          'INSERT INTO ingredients_allergens (ingredient_id, allergen_id) VALUES ($1, $2)',
+          'INSERT INTO ingredient_allergens (ingredient_id, allergen_id) VALUES ($1, $2)',
           [ingredient.id, aid]
         )
       );
