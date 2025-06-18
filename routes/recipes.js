@@ -148,6 +148,7 @@ router.post('/recipes',authenticateToken, async (req, res) => {
     healthScore,
     categories,
     dishTypes,
+    cuisineTypes,
     ingredients,
     instructions,
     nutrients,
@@ -155,7 +156,7 @@ router.post('/recipes',authenticateToken, async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT add_recipe($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb) AS recipe_id`,
+      `SELECT add_recipe($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb) AS recipe_id`,
       [
         title,
         image,
@@ -166,6 +167,7 @@ router.post('/recipes',authenticateToken, async (req, res) => {
         healthScore,
         JSON.stringify(categories),
         JSON.stringify(dishTypes),
+        JSON.stringify(cuisineTypes),
         JSON.stringify(ingredients),
         JSON.stringify(instructions),
         JSON.stringify(nutrients),
