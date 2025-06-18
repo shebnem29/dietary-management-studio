@@ -137,7 +137,7 @@ router.get('/ingredients', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-router.post('/recipes', async (req, res) => {
+router.post('/recipes',authenticateToken, async (req, res) => {
   const {
     title,
     image,
