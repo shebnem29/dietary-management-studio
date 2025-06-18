@@ -117,6 +117,18 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+// GET /dish-types
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM public.dish_types'); 
+    console.log('Fetched dish types:', result.rows);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching dish types:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET all recipes or filter by category
 router.get('/', async (req, res) => {
     const { category } = req.query;
@@ -197,4 +209,5 @@ router.get('/:id/instructions', async (req, res) => {
     }
   });
   
+
 module.exports = router;
