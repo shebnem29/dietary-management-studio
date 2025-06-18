@@ -120,7 +120,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // GET /dish-types
 router.get('/dish-types', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM public.dish_types'); 
+    const result = await db.query('SELECT * FROM public.dish_types'); 
     console.log('Fetched dish types:', result.rows);
     res.json(result.rows);
   } catch (err) {
