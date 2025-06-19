@@ -4,7 +4,7 @@ const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
     try {
       const result = await pool.query('SELECT * FROM public.categories'); // force schema
       console.log('Fetched categories:', result.rows); // Log to Render logs
