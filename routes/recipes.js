@@ -266,7 +266,7 @@ router.get('/', authenticateToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch recipes' });
     }
 });
-router.get('/:id/ingredients', async (req, res) => {
+router.get('/:id/ingredients', authenticateToken, async (req, res) => {
     const recipeId = req.params.id;
     try {
       const query = `
@@ -284,7 +284,7 @@ router.get('/:id/ingredients', async (req, res) => {
     }
   });
   // GET instructions by recipe ID
-router.get('/:id/instructions', async (req, res) => {
+router.get('/:id/instructions', authenticateToken, async (req, res) => {
     const recipeId = req.params.id;
   
     try {
