@@ -197,7 +197,7 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken,  async (req, res) => {
   const { id } = req.params;
 
   try {
