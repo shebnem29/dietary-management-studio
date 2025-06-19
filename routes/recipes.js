@@ -223,7 +223,7 @@ router.post('/ingredients', authenticateToken, async (req, res) => {
   }
 });
 // GET all recipes or filter by category
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
     const { category } = req.query;
 
     try {
