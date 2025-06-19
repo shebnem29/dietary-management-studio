@@ -10,64 +10,64 @@ const JWT_SECRET = process.env.JWT_SECRET;;
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/register', async (req, res) => {
-    const { name, email, password, tipsOptIn } = req.body;
+  const { name, email, password, tipsOptIn } = req.body;
 
-    if (!name || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required' });
-    }
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
 
-    try {
-        const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-        const existingUser = result.rows[0];
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+    const existingUser = result.rows[0];
 
-        // 🔁 If user already exists
-        if (existingUser) {
-            if (existingUser.verified) {
-                return res.status(400).json({ message: 'Email already registered' });
-            } else {
-                // 🔁 Resend verification code
-                const newVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-                await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [newVerificationCode, email]);
-
-                await sgMail.send({
-                    to: email,
-                    from: 'snacksmartapp@gmail.com',
-                    templateId: process.env.SENDGRID_TEMPLATE_ID,
-                    dynamic_template_data: {
-                        name: existingUser.name,
-                        code: newVerificationCode
-                    },
-                });
-
-                return res.status(200).json({ message: 'User already registered but not verified. New verification code sent.' });
-            }
-        }
-
-        // 🆕 Register new user
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        await db.query(
-            'INSERT INTO users (name, email, password, tips_opt_in, email_verification_code) VALUES ($1, $2, $3, $4, $5)',
-            [name, email, hashedPassword, tipsOptIn || false, verificationCode]
-        );
+    // 🔁 If user already exists
+    if (existingUser) {
+      if (existingUser.verified) {
+        return res.status(400).json({ message: 'Email already registered' });
+      } else {
+        // 🔁 Resend verification code
+        const newVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [newVerificationCode, email]);
 
         await sgMail.send({
-            to: email,
-            from: 'snacksmartapp@gmail.com',
-            templateId: process.env.SENDGRID_TEMPLATE_ID,
-            dynamic_template_data: {
-                name,
-                code: verificationCode
-            },
+          to: email,
+          from: 'snacksmartapp@gmail.com',
+          templateId: process.env.SENDGRID_TEMPLATE_ID,
+          dynamic_template_data: {
+            name: existingUser.name,
+            code: newVerificationCode
+          },
         });
 
-        res.status(201).json({ message: 'User registered. Please verify your email.' });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
+        return res.status(200).json({ message: 'User already registered but not verified. New verification code sent.' });
+      }
     }
+
+    // 🆕 Register new user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await db.query(
+      'INSERT INTO users (name, email, password, tips_opt_in, email_verification_code) VALUES ($1, $2, $3, $4, $5)',
+      [name, email, hashedPassword, tipsOptIn || false, verificationCode]
+    );
+
+    await sgMail.send({
+      to: email,
+      from: 'snacksmartapp@gmail.com',
+      templateId: process.env.SENDGRID_TEMPLATE_ID,
+      dynamic_template_data: {
+        name,
+        code: verificationCode
+      },
+    });
+
+    res.status(201).json({ message: 'User registered. Please verify your email.' });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 });
 
 router.post('/login', async (req, res) => {
@@ -79,29 +79,35 @@ router.post('/login', async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT u.id, u.email, u.password, u.verified, u.sex, u.birthday, u.height, u.weight, u.activity_level_id,
-       g.goal_weight, g.weekly_rate_kg,
-       m.protein_ratio, m.fat_ratio, m.carb_ratio
-
-  FROM users u
-  LEFT JOIN user_goals g ON u.id = g.user_id
-  LEFT JOIN user_macros m ON u.id = m.user_id
-  WHERE u.email = $1
+      `SELECT 
+  u.id, u.email, u.password, u.verified, u.sex, u.birthday, u.height, u.weight, u.activity_level_id,
+  g.goal_weight, g.weekly_rate_kg,
+  m.protein_ratio, m.fat_ratio, m.carb_ratio
+FROM users u
+LEFT JOIN LATERAL (
+  SELECT goal_weight, weekly_rate_kg
+  FROM user_goals
+  WHERE user_id = u.id
+  ORDER BY created_at DESC
+  LIMIT 1
+) g ON true
+LEFT JOIN user_macros m ON u.id = m.user_id
+WHERE u.email = $1
 `, [email]);
 
 
-const user = result.rows[0];
+    const user = result.rows[0];
 
-if (!user) {
-  return res.status(401).json({ message: 'Invalid credentials' });
-}
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
-// Now it's safe to use user.id
-const [prefResult, allergyResult, cuisineResult] = await Promise.all([
-  db.query("SELECT 1 FROM user_preferences WHERE user_id = $1", [user.id]),
-  db.query("SELECT 1 FROM user_allergies WHERE user_id = $1 LIMIT 1", [user.id]),
-  db.query("SELECT 1 FROM user_favorite_cuisines WHERE user_id = $1 LIMIT 1", [user.id]),
-]);
+    // Now it's safe to use user.id
+    const [prefResult, allergyResult, cuisineResult] = await Promise.all([
+      db.query("SELECT 1 FROM user_preferences WHERE user_id = $1", [user.id]),
+      db.query("SELECT 1 FROM user_allergies WHERE user_id = $1 LIMIT 1", [user.id]),
+      db.query("SELECT 1 FROM user_favorite_cuisines WHERE user_id = $1 LIMIT 1", [user.id]),
+    ]);
 
     if (!user.verified) {
       return res.status(403).json({ message: 'Please verify your email before logging in.' });
@@ -120,17 +126,17 @@ const [prefResult, allergyResult, cuisineResult] = await Promise.all([
       birthday: user.birthday,
       height: user.height,
       weight: user.weight,
-  activity_level_id: user.activity_level_id, 
+      activity_level_id: user.activity_level_id,
       physiological_state: user.physiological_state,
-       goal_weight: user.goal_weight,
-  weekly_rate_kg: user.weekly_rate_kg,
-  macro_set:
-    user.protein_ratio !== null &&
-    user.fat_ratio !== null &&
-    user.carb_ratio !== null,
-     hasPreferences: prefResult.rowCount > 0,
-  hasAllergies: allergyResult.rowCount > 0,
-  hasCuisines: cuisineResult.rowCount > 0,
+      goal_weight: user.goal_weight,
+      weekly_rate_kg: user.weekly_rate_kg,
+      macro_set:
+        user.protein_ratio !== null &&
+        user.fat_ratio !== null &&
+        user.carb_ratio !== null,
+      hasPreferences: prefResult.rowCount > 0,
+      hasAllergies: allergyResult.rowCount > 0,
+      hasCuisines: cuisineResult.rowCount > 0,
     });
   } catch (err) {
     console.error(err);
@@ -138,52 +144,52 @@ const [prefResult, allergyResult, cuisineResult] = await Promise.all([
   }
 });
 router.post('/verify-code', async (req, res) => {
-    const { email, code } = req.body;
+  const { email, code } = req.body;
 
-    try {
-        const result = await db.query('SELECT email_verification_code FROM users WHERE email = $1', [email]);
-        const user = result.rows[0];
+  try {
+    const result = await db.query('SELECT email_verification_code FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
-        if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-        if (user.email_verification_code === code) {
-            await db.query('UPDATE users SET verified = true, email_verification_code = NULL WHERE email = $1', [email]);
-            return res.status(200).json({ message: '✅ Email verified!' });
-        } else {
-            return res.status(400).json({ message: '❌ Invalid verification code' });
-        }
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
+    if (user.email_verification_code === code) {
+      await db.query('UPDATE users SET verified = true, email_verification_code = NULL WHERE email = $1', [email]);
+      return res.status(200).json({ message: '✅ Email verified!' });
+    } else {
+      return res.status(400).json({ message: '❌ Invalid verification code' });
     }
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 router.post('/resend-code', async (req, res) => {
-    const { email } = req.body;
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const { email } = req.body;
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    try {
-        const result = await db.query('SELECT * FROM users WHERE email = $1 AND verified = false', [email]);
-        const user = result.rows[0];
-        if (!user) return res.status(404).json({ message: 'User not found or already verified' });
+  try {
+    const result = await db.query('SELECT * FROM users WHERE email = $1 AND verified = false', [email]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ message: 'User not found or already verified' });
 
-        await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [code, email]);
+    await db.query('UPDATE users SET email_verification_code = $1 WHERE email = $2', [code, email]);
 
-        await sgMail.send({
-            to: email,
-            from: 'snacksmartapp@gmail.com',
-            templateId: process.env.SENDGRID_TEMPLATE_ID,
-            dynamic_template_data: {
-                name: user.name,
-                code
-            },
-        });
+    await sgMail.send({
+      to: email,
+      from: 'snacksmartapp@gmail.com',
+      templateId: process.env.SENDGRID_TEMPLATE_ID,
+      dynamic_template_data: {
+        name: user.name,
+        code
+      },
+    });
 
-        res.status(200).json({ message: 'Verification code resent.' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
+    res.status(200).json({ message: 'Verification code resent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 router.get('/account-details', authenticateToken, async (req, res) => {
   try {
