@@ -18,6 +18,7 @@ const userPreferencesRoutes = require("./routes/userPreferences");
 const adminRoutes = require('./routes/admin');
 const adminDashboardRoutes = require('./routes/adminPanelDashboardStats')
 const adminAnalyticsRoutes = require('./routes/adminAnalyticsRoutes')
+const favoriteRoutes = require('./routes/favorites');
 const pool = require('./db'); // ← add this
 require('dotenv').config();
 
@@ -45,5 +46,7 @@ app.use("/api/user/preferences", userPreferencesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/adminDashboard', adminDashboardRoutes)
 app.use('/adminAnalytics', adminAnalyticsRoutes)
+app.use('/favorites', favoriteRoutes);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
