@@ -10,7 +10,7 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT r.id, r.title, r.image, r.ready_in_minutes, r.servings
-      FROM favorites f
+      FROM user_favourite_recipes f
       JOIN recipes r ON f.recipe_id = r.id
       WHERE f.user_id = $1
     `, [userId]);
@@ -33,7 +33,7 @@ router.post('/', authenticateToken, async (req, res) => {
 
   try {
     await db.query(`
-      INSERT INTO favorites (user_id, recipe_id)
+      INSERT INTO user_favourite_recipes (user_id, recipe_id)
       VALUES ($1, $2)
       ON CONFLICT (user_id, recipe_id) DO NOTHING
     `, [userId, recipeId]);
@@ -52,7 +52,7 @@ router.delete('/:recipeId', authenticateToken, async (req, res) => {
 
   try {
     const result = await db.query(`
-      DELETE FROM favorites
+      DELETE FROM user_favourite_recipes
       WHERE user_id = $1 AND recipe_id = $2
     `, [userId, recipeId]);
 
@@ -74,7 +74,7 @@ router.get('/:recipeId', authenticateToken, async (req, res) => {
 
   try {
     const result = await db.query(`
-      SELECT 1 FROM favorites
+      SELECT 1 FROM user_favourite_recipes
       WHERE user_id = $1 AND recipe_id = $2
     `, [userId, recipeId]);
 
