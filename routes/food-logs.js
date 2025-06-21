@@ -286,6 +286,7 @@ router.get('/history', authenticateToken, async (req, res) => {
      SELECT * FROM (
   SELECT DISTINCT ON (f.id)
     fl.id,
+     fl.food_id,
     fl.meal_type,
     fl.quantity,
     fl.unit,
@@ -327,6 +328,7 @@ ORDER BY created_at desc;
 
       return {
         id: row.id,
+        food_id: row.food_id,
         meal_type: row.meal_type,
         quantity,
         unit: row.unit,
