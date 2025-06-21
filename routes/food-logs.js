@@ -41,9 +41,9 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const { nutrients, serving_size_g } = food;
     const unitValue = parseFloat(unit); // ✅ Convert "100 g" or "1 g" to a number
-const servingSizeG = serving_size_g || 100;
-const totalGrams = quantity * unitValue; // ✅ calculate total grams
-const multiplier = totalGrams / servingSizeG; // ✅ accurate for all units
+    const servingSizeG = serving_size_g || 100;
+    const totalGrams = quantity * unitValue; // ✅ calculate total grams
+    const multiplier = totalGrams / servingSizeG; // ✅ accurate for all units
 
     // 3. Extract macros from nutrients JSON
     const protein = (nutrients?.["Protein"]?.value || 0) * multiplier;
@@ -83,11 +83,11 @@ router.get('/', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
-let requestedDate = req.query.date;
-if (!requestedDate) {
-  requestedDate = new Date().toISOString().split('T')[0];
-}
-console.log("🔍 Requested date:", requestedDate);
+    let requestedDate = req.query.date;
+    if (!requestedDate) {
+      requestedDate = new Date().toISOString().split('T')[0];
+    }
+    console.log("🔍 Requested date:", requestedDate);
     const result = await pool.query(
       `
       SELECT
@@ -283,19 +283,23 @@ router.get('/history', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       `
-      SELECT
-        fl.id,
-        fl.meal_type,
-        fl.quantity,
-        fl.unit,
-        fl.date,
-        f.name AS food_name,
-        f.nutrients,
-        f.serving_size_g
-      FROM food_logs fl
-      JOIN foods f ON fl.food_id = f.id
-      WHERE fl.user_id = $1
-      ORDER BY fl.date DESC, fl.created_at DESC
+     SELECT * FROM (
+  SELECT DISTINCT ON (f.id)
+    fl.id,
+    fl.meal_type,
+    fl.quantity,
+    fl.unit,
+    fl.date,
+    fl.created_at,
+    f.name AS food_name,
+    f.nutrients,
+    f.serving_size_g
+  FROM food_logs fl
+  JOIN foods f ON fl.food_id = f.id
+  WHERE fl.user_id = 20
+  ORDER BY f.id, fl.created_at DESC 
+) AS deduped
+ORDER BY created_at desc; 
       `,
       [user_id]
     );
