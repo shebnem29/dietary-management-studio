@@ -4,7 +4,7 @@ const pool = require('../db'); // Your PostgreSQL connection
 const { authenticateToken } = require('../middleware/auth');
 require('dotenv').config();
 
-router.post('/foods', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   const { name, brand, serving_size_g, nutrients, source = 'user', category_id } = req.body;
 
   if (!name || !serving_size_g || !nutrients || typeof nutrients !== 'object') {
@@ -25,3 +25,4 @@ router.post('/foods', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+module.exports = router;
