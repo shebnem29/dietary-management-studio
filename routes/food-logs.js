@@ -296,7 +296,7 @@ router.get('/history', authenticateToken, async (req, res) => {
     f.serving_size_g
   FROM food_logs fl
   JOIN foods f ON fl.food_id = f.id
-  WHERE fl.user_id = 20
+  WHERE fl.user_id = $1
   ORDER BY f.id, fl.created_at DESC 
 ) AS deduped
 ORDER BY created_at desc; 
