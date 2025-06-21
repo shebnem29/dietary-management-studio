@@ -35,7 +35,15 @@ router.get('/list-all-foods', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-
+router.get('/food-categories', authenticateToken, async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM food_categories'); // force schema
+      res.json(result.rows);
+    } catch (err) {
+      console.error('Error fetching categories:', err); // This will show up in logs
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 router.get('/search', authenticateToken, async (req, res) => {
   const requesterRole = req.user?.role;
   if (requesterRole !== 'content') {
