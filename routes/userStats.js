@@ -81,7 +81,7 @@ router.get('/history', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/meal-plan-request', authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const {
     diabetes,
