@@ -81,4 +81,37 @@ router.get('/history', authenticateToken, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.post('/', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const {
+    diabetes,
+    cholesterol,
+    bloodPressure,
+    fatigue,
+    digestion,
+    comments,
+  } = req.body;
+
+  if (
+    diabetes === undefined || cholesterol === undefined ||
+    bloodPressure === undefined || fatigue === undefined || digestion === undefined
+  ) {
+    return res.status(400).json({ message: 'All health fields are required.' });
+  }
+
+  try {
+    const result = await db.query(
+      `INSERT INTO meal_plan_requests
+        (user_id, diabetes, cholesterol, blood_pressure, fatigue, digestion, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [userId, diabetes === 'Yes', cholesterol === 'Yes', bloodPressure, fatigue === 'Yes', digestion === 'Yes', comments]
+    );
+
+    res.status(201).json({ message: 'Request submitted', requestId: result.rows[0].id });
+  } catch (err) {
+    console.error('Error inserting meal plan request:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
