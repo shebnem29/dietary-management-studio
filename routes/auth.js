@@ -191,6 +191,48 @@ router.post('/resend-code', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+router.patch('/update-email', async (req, res) => {
+  const { oldEmail, newEmail } = req.body;
+
+  if (!oldEmail || !newEmail) {
+    return res.status(400).json({ message: 'Both emails are required.' });
+  }
+
+  try {
+    const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [oldEmail]);
+    if (!existingUser.rows[0] || existingUser.rows[0].verified) {
+      return res.status(404).json({ message: 'Original user not found or already verified.' });
+    }
+
+    const newEmailCheck = await db.query('SELECT * FROM users WHERE email = $1', [newEmail]);
+    if (newEmailCheck.rows.length > 0) {
+      return res.status(400).json({ message: 'New email is already in use.' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await db.query(`
+      UPDATE users
+      SET email = $1, email_verification_code = $2
+      WHERE email = $3
+    `, [newEmail, verificationCode, oldEmail]);
+
+    await sgMail.send({
+      to: newEmail,
+      from: 'snacksmartapp@gmail.com',
+      templateId: process.env.SENDGRID_TEMPLATE_ID,
+      dynamic_template_data: {
+        name: existingUser.rows[0].name,
+        code: verificationCode,
+      },
+    });
+
+    res.status(200).json({ message: 'Email updated and verification code sent.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 router.get('/account-details', authenticateToken, async (req, res) => {
   try {
     const result = await db.query(
