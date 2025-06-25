@@ -277,7 +277,36 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.patch("/activity-level", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { activity_level_id } = req.body;
 
+  if (!activity_level_id || typeof activity_level_id !== 'number') {
+    return res.status(400).json({ message: "Invalid activity_level_id" });
+  }
+
+  try {
+    // Check if activity level exists
+    const levelCheck = await db.query(
+      `SELECT id FROM activity_levels WHERE id = $1`,
+      [activity_level_id]
+    );
+    if (levelCheck.rows.length === 0) {
+      return res.status(404).json({ message: "Activity level not found" });
+    }
+
+    // Update user
+    await db.query(
+      `UPDATE users SET activity_level_id = $1 WHERE id = $2`,
+      [activity_level_id, userId]
+    );
+
+    res.status(200).json({ message: "Activity level updated successfully" });
+  } catch (err) {
+    console.error("❌ Error updating activity level:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 router.post("/weight-goal-tracking", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { goal_weight, weekly_rate_kg } = req.body;
