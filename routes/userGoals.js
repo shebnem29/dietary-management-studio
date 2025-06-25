@@ -258,6 +258,7 @@ router.get("/energy-summary", authenticateToken, async (req, res) => {
         age,
         height,
         weight,
+        activity_level_id,
         bmi: parseFloat(bmi.toFixed(1))
       },
       bmr: Math.round(bmr),
