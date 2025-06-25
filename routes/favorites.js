@@ -9,7 +9,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
   try {
     const result = await db.query(`
-      SELECT r.id, r.title, r.image, r.ready_in_minutes, r.servings
+      SELECT r.id, r.title, r.image, r.summary, r.ready_in_minutes, r.servings
       FROM user_favourite_recipes f
       JOIN recipes r ON f.recipe_id = r.id
       WHERE f.user_id = $1
