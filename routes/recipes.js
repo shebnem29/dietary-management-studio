@@ -230,16 +230,24 @@ router.get('/', authenticateToken, async (req, res) => {
         let result;
 
         // Build base query with joins to get cuisines and allergens
-        let query = `
-            SELECT 
-                r.*, 
-                COALESCE(json_agg(DISTINCT rc.cuisine_id) FILTER (WHERE rc.cuisine_id IS NOT NULL), '[]') AS cuisine_ids,
-                COALESCE(json_agg(DISTINCT ia.allergen_id) FILTER (WHERE ia.allergen_id IS NOT NULL), '[]') AS allergen_ids
-            FROM recipes r
-            LEFT JOIN recipe_cuisines rc ON r.id = rc.recipe_id
-            LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
-            LEFT JOIN ingredient_allergens ia ON ri.ingredient_id = ia.ingredient_id
-        `;
+       let query = `
+  SELECT 
+    r.*, 
+    COALESCE(json_agg(DISTINCT rc.cuisine_id) FILTER (WHERE rc.cuisine_id IS NOT NULL), '[]') AS cuisine_ids,
+    COALESCE(json_agg(DISTINCT ia.allergen_id) FILTER (WHERE ia.allergen_id IS NOT NULL), '[]') AS allergen_ids,
+    COALESCE(json_agg(
+      DISTINCT jsonb_build_object(
+        'name', n.name,
+        'amount', n.amount,
+        'unit', n.unit
+      )
+    ) FILTER (WHERE n.id IS NOT NULL), '[]') AS nutrients
+  FROM recipes r
+  LEFT JOIN recipe_cuisines rc ON r.id = rc.recipe_id
+  LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+  LEFT JOIN ingredient_allergens ia ON ri.ingredient_id = ia.ingredient_id
+  LEFT JOIN nutrients n ON r.id = n.recipe_id
+`;
 
         const values = [];
 
