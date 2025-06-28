@@ -1,6 +1,9 @@
 // db.js
 const { Pool } = require('pg');
-
+console.log('Connecting to PostgreSQL...');
+console.log('PGHOST:', process.env.PGHOST);
+console.log('PGDATABASE:', process.env.PGDATABASE);
+console.log('PGUSER:', process.env.PGUSER);
 const pool = new Pool({
   user: process.env.PGUSER,
   host: process.env.PGHOST,
